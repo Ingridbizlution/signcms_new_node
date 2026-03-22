@@ -39,6 +39,7 @@ const KnowledgeBasePage = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [fileItem, setFileItem] = useState<KnowledgeItem | null>(null);
   const [newItem, setNewItem] = useState({ title: "", description: "", category: "", subCategory: "" });
 
   const filtered = items.filter((item) => {
