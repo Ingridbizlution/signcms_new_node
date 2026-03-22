@@ -117,22 +117,22 @@ const TEMPLATES: TemplateItem[] = [
 ];
 
 // ── Carousel Preview ───────────────────────────────────────────────
-function CarouselPreview({ items, interval = 3, transition = "fade" }: { items: MediaItem[]; interval?: number; transition?: CarouselTransition }) {
+function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; transition?: CarouselTransition }) {
   const [idx, setIdx] = useState(0);
   const [prevIdx, setPrevIdx] = useState(0);
   const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const timer = setInterval(() => {
+    const currentDuration = (items[idx]?.duration || 5) * 1000;
+    const timer = setTimeout(() => {
       setPrevIdx(idx);
       setAnimating(true);
       setIdx((i) => (i + 1) % items.length);
-      const timeout = setTimeout(() => setAnimating(false), 600);
-      return () => clearTimeout(timeout);
-    }, interval * 1000);
-    return () => clearInterval(timer);
-  }, [items.length, interval, idx]);
+      setTimeout(() => setAnimating(false), 600);
+    }, currentDuration);
+    return () => clearTimeout(timer);
+  }, [items.length, idx, items]);
 
   if (items.length === 0) return null;
 
@@ -199,7 +199,7 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
   zone: Zone;
   onUpdate: (content: ZoneContent) => void;
   onClose: () => void;
-  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string }[];
+  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[];
 }) {
   const { t } = useLanguage();
   const content: ZoneContent = zone.content || { type: "color", value: "", bgColor: "hsl(var(--muted))" };
@@ -207,7 +207,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const addMedia = (m: typeof dbMedia[0]) => {
-    const newItem: MediaItem = { id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: 5 };
+    const dur = m.type === "video" && m.duration ? parseFloat(m.duration) || 10 : 5;
+    const newItem: MediaItem = { id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: dur };
     onUpdate({ ...content, type: "media", mediaItems: [...mediaItems, newItem] });
   };
 
@@ -237,6 +238,25 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
                 <div key={m.id + i} className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs">
                   {m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Film className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                   <span className="truncate flex-1 text-foreground">{m.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {m.type === "video" ? (
+                      <span className="text-[10px] text-muted-foreground">{m.duration || 10}s</span>
+                    ) : (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                          const updated = [...mediaItems];
+                          updated[i] = { ...m, duration: Math.max(1, (m.duration || 5) - 1) };
+                          onUpdate({ ...content, mediaItems: updated });
+                        }}><Minus className="w-2.5 h-2.5" /></Button>
+                        <span className="text-[10px] font-medium text-foreground w-5 text-center">{m.duration || 5}s</span>
+                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                          const updated = [...mediaItems];
+                          updated[i] = { ...m, duration: Math.min(60, (m.duration || 5) + 1) };
+                          onUpdate({ ...content, mediaItems: updated });
+                        }}><Plus className="w-2.5 h-2.5" /></Button>
+                      </>
+                    )}
+                  </div>
                   <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => removeMedia(m.id)}><X className="w-3 h-3" /></Button>
                 </div>
               ))}
@@ -244,11 +264,6 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
           )}
           {mediaItems.length > 1 && (
             <div className="space-y-2 mt-1">
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] text-muted-foreground whitespace-nowrap">{t("studioInterval")}</label>
-                <Slider value={[content.carouselInterval || 3]} min={1} max={15} step={1} onValueChange={([v]) => onUpdate({ ...content, carouselInterval: v })} className="flex-1" />
-                <span className="text-[11px] font-medium text-foreground w-6 text-right">{content.carouselInterval || 3}s</span>
-              </div>
               <div>
                 <label className="text-[11px] text-muted-foreground mb-1 block">{t("studioTransition")}</label>
                 <div className="flex gap-1">
@@ -338,10 +353,10 @@ export default function ContentStudioPage() {
   const [saving, setSaving] = useState(false);
 
   // DB media for picker
-  const [dbMedia, setDbMedia] = useState<{ id: string; name: string; type: string; url: string; thumbnail: string }[]>([]);
+  const [dbMedia, setDbMedia] = useState<{ id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[]>([]);
 
   useEffect(() => {
-    (supabase as any).from("media_items").select("id, name, type, url, thumbnail").order("created_at", { ascending: false }).then((res: any) => {
+    (supabase as any).from("media_items").select("id, name, type, url, thumbnail, duration").order("created_at", { ascending: false }).then((res: any) => {
       setDbMedia(res.data || []);
     });
   }, []);
@@ -561,7 +576,7 @@ export default function ContentStudioPage() {
                 >
                   {/* Content render */}
                   {zone.content?.type === "media" && mediaItems.length > 0 ? (
-                    <CarouselPreview items={mediaItems} interval={zone.content.carouselInterval || 3} transition={zone.content.carouselTransition || "fade"} />
+                    <CarouselPreview items={mediaItems} transition={zone.content.carouselTransition || "fade"} />
                   ) : zone.content?.type === "text" && zone.content.value ? (
                     <div className="p-3 w-full" style={{ color: zone.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(zone.content.fontSize || 24, 52), textAlign: zone.content.textAlign || "center" }}>
                       <span className="font-bold leading-tight whitespace-pre-line">{zone.content.value}</span>
