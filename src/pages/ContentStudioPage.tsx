@@ -58,11 +58,22 @@ interface Zone {
   content?: ZoneContent;
 }
 
+interface OverlayBlock {
+  id: string;
+  x: number; // px position relative to canvas
+  y: number;
+  w: number; // px size
+  h: number;
+  label: string;
+  content?: ZoneContent;
+}
+
 interface DesignProject {
   id: string;
   name: string;
   aspect: AspectRatio;
   zones: Zone[];
+  overlays?: OverlayBlock[];
   created_at: string;
   updated_at: string;
 }
