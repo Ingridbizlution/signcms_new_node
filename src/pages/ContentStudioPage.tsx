@@ -591,6 +591,19 @@ export default function ContentStudioPage() {
   const applyLayout = useCallback((preset: LayoutPreset) => { setZones(preset.zones.map((z) => ({ ...z }))); setSelectedZone(null); }, []);
   const applyTemplate = useCallback((tpl: TemplateItem) => { setAspect(tpl.aspect); setZones(tpl.zones.map((z) => ({ ...z }))); setSelectedZone(null); }, []);
   const updateZoneContent = useCallback((zoneId: string, content: ZoneContent) => { setZones((prev) => prev.map((z) => (z.id === zoneId ? { ...z, content } : z))); }, []);
+  const updateOverlayContent = useCallback((overlayId: string, content: ZoneContent) => { setOverlays((prev) => prev.map((o) => (o.id === overlayId ? { ...o, content } : o))); }, []);
+
+  // Overlay management
+  const addOverlay = useCallback(() => {
+    const id = `overlay-${Date.now()}`;
+    const label = String.fromCharCode(65 + overlays.length); // A, B, C...
+    setOverlays((prev) => [...prev, { id, x: 50, y: 50, w: 200, h: 120, label: `OV-${label}`, content: { type: "text", value: "", bgColor: "hsla(0, 0%, 0%, 0.7)", fontSize: 20, textColor: "hsl(0 0% 100%)" } }]);
+  }, [overlays.length]);
+
+  const deleteOverlay = useCallback((id: string) => {
+    setOverlays((prev) => prev.filter((o) => o.id !== id));
+    if (selectedOverlay === id) setSelectedOverlay(null);
+  }, [selectedOverlay]);
 
   // Save project
   const handleSave = useCallback(async (name?: string) => {
