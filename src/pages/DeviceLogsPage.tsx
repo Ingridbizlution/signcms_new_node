@@ -357,29 +357,50 @@ export default function SystemLogsPage() {
           ) : filteredActivity.length === 0 ? (
             <Card className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{labels.noLogs[language]}</p></Card>
           ) : (
-            <div className="space-y-2">
-              {filteredActivity.map((log, i) => {
-                const cfg = ACTIVITY_CATEGORY_CONFIG[log.category] || ACTIVITY_CATEGORY_CONFIG.auth;
-                const Icon = cfg.icon;
-                return (
-                  <Card key={log.id} className={`p-3 flex items-start gap-3 shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-                    <div className={`mt-0.5 p-1.5 rounded-lg ${cfg.color}`}><Icon className="w-4 h-4" /></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-foreground">{log.action}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{cfg.label[language]}</Badge>
-                      </div>
-                      {log.target_name && <p className="text-xs text-muted-foreground mt-0.5">{log.target_name}</p>}
-                      {log.detail && <p className="text-xs text-muted-foreground mt-0.5">{log.detail}</p>}
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
-                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{log.user_name}</span>
-                        <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+            <Card className="overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[160px]">{{ zh: "操作人員", en: "Operator", ja: "操作者" }[language]}</TableHead>
+                    <TableHead>{{ zh: "操作內容", en: "Action", ja: "操作内容" }[language]}</TableHead>
+                    <TableHead className="w-[120px]">{{ zh: "操作時間", en: "Time", ja: "時間" }[language]}</TableHead>
+                    <TableHead className="w-[130px]">{{ zh: "IP 地址", en: "IP Address", ja: "IPアドレス" }[language]}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredActivity.map((log) => {
+                    const colors = getActionColor(log.action, log.category);
+                    return (
+                      <TableRow key={log.id} className={`${colors.bg} border-b border-border/50 transition-colors`}>
+                        <TableCell className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium text-foreground">{log.user_name || "-"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
+                            <div className="min-w-0">
+                              <span className={`text-sm font-medium ${colors.text}`}>{log.action}</span>
+                              {log.target_name && <span className="text-xs text-muted-foreground ml-2">— {log.target_name}</span>}
+                              {log.detail && <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-md">{log.detail}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(log.created_at), "MM-dd HH:mm:ss")}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-xs text-muted-foreground font-mono">
+                          {log.ip_address || "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
           )}
         </TabsContent>
       </Tabs>
