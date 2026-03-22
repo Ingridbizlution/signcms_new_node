@@ -247,6 +247,22 @@ const translations = {
   studioTplCoffee: { zh: "咖啡時光", en: "Coffee Time", ja: "コーヒータイム" },
   studioFontSize: { zh: "字型大小", en: "Font Size", ja: "フォントサイズ" },
   studioTextAlign: { zh: "文字對齊", en: "Text Align", ja: "テキスト配置" },
+  studioMediaCarousel: { zh: "媒體輪播", en: "Media Carousel", ja: "メディアカルーセル" },
+  studioInterval: { zh: "輪播間隔", en: "Interval", ja: "間隔" },
+  studioProjects: { zh: "我的專案", en: "My Projects", ja: "マイプロジェクト" },
+  studioNoProjects: { zh: "尚無儲存的設計專案", en: "No saved projects", ja: "保存されたプロジェクトはありません" },
+  studioEditing: { zh: "編輯中", en: "Editing", ja: "編集中" },
+  studioNew: { zh: "新建", en: "New", ja: "新規" },
+  studioOpen: { zh: "開啟", en: "Open", ja: "開く" },
+  studioSaveProject: { zh: "儲存設計專案", en: "Save Design Project", ja: "デザインプロジェクトを保存" },
+  studioSaveDesc: { zh: "為您的設計專案命名以便日後編輯", en: "Name your project for future editing", ja: "後で編集できるようにプロジェクトに名前を付けてください" },
+  studioProjectNamePlaceholder: { zh: "例如：春季促銷廣告", en: "e.g. Spring Promo Ad", ja: "例：春のプロモ広告" },
+  studioOpenProject: { zh: "開啟設計專案", en: "Open Design Project", ja: "デザインプロジェクトを開く" },
+  studioOpenDesc: { zh: "選擇一個已儲存的專案繼續編輯", en: "Select a saved project to continue editing", ja: "保存されたプロジェクトを選択して編集を続ける" },
+  studioProjectSaved: { zh: "專案已儲存", en: "Project saved", ja: "プロジェクトを保存しました" },
+  studioProjectSaveFailed: { zh: "儲存失敗", en: "Save failed", ja: "保存に失敗しました" },
+  studioProjectLoaded: { zh: "專案已載入", en: "Project loaded", ja: "プロジェクトを読み込みました" },
+  studioProjectDeleted: { zh: "專案已刪除", en: "Project deleted", ja: "プロジェクトを削除しました" },
 } as const;
 
 type TranslationKey = keyof typeof translations;
