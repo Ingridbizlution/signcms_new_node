@@ -472,7 +472,7 @@ export default function ScreensPage() {
                     const isWarning = hasData && (isUpLow || isDownLow);
 
                     return (
-                      <span title={`網路速度健康狀態（閾值：上傳 ${uploadThreshold} Mbps / 下載 ${downloadThreshold} Mbps）`} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
+                      <span title={t("tipNetworkSpeedHealth").replace("{up}", String(uploadThreshold)).replace("{down}", String(downloadThreshold))} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
                         !hasData
                           ? "bg-muted text-muted-foreground"
                           : isWarning
