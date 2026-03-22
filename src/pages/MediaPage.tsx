@@ -453,6 +453,7 @@ const MediaPage = () => {
       formData.append("type", isImage ? "image" : "video");
       formData.append("dimensions", dimensions);
       if (duration) formData.append("duration", duration);
+      if (defaultOrgId) formData.append("org_id", defaultOrgId);
 
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
