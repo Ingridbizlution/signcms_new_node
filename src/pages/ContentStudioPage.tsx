@@ -779,7 +779,9 @@ export default function ContentStudioPage() {
                 >
                   {/* Content render */}
                   {zone.content?.type === "widget" && zone.content.widgetConfig ? (
-                    <WidgetZonePreview config={zone.content.widgetConfig} />
+                    <ZoneAnimatedWrapper animation={zone.content.widgetConfig.animation}>
+                      <WidgetZonePreview config={zone.content.widgetConfig} />
+                    </ZoneAnimatedWrapper>
                   ) : zone.content?.type === "media" && mediaItems.length > 0 ? (
                     <CarouselPreview items={mediaItems} transition={zone.content.carouselTransition || "fade"} />
                   ) : zone.content?.type === "text" && zone.content.value ? (
