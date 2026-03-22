@@ -369,7 +369,7 @@ export default function MediaPage() {
   const [widgetDialogOpen, setWidgetDialogOpen] = useState(false);
   const [projects, setProjects] = useState<DesignProject[]>([]);
   const [projectFilter, setProjectFilter] = useState("all");
-  const [uploadProjectId, setUploadProjectId] = useState<string>("");
+  const [uploadProjectId, setUploadProjectId] = useState<string>("__none__");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Widget form state — text color defaults to theme-aware
