@@ -79,7 +79,7 @@ const ChatWidget = () => {
               <h4 className="text-sm font-semibold text-white">
                 {isAI ? "AI 智慧助手" : "真人客服"}
               </h4>
-              <p className="text-xs text-white/70">隨時為您服務</p>
+              <p className="text-xs text-primary-foreground/70">隨時為您服務</p>
             </div>
             <Button
               variant="ghost"
