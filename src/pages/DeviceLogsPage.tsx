@@ -15,7 +15,7 @@ import {
   RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
   Trash2, Send, ShieldCheck, Image, Brush,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
 import * as XLSX from "xlsx";
 
 // --- Device log types ---
@@ -111,6 +111,7 @@ export default function SystemLogsPage() {
   const [activitySearch, setActivitySearch] = useState("");
   const [activityFilterCategory, setActivityFilterCategory] = useState("all");
   const [activityFilterOrg, setActivityFilterOrg] = useState("all");
+  const [activityFilterTime, setActivityFilterTime] = useState("all");
 
   // --- Shared ---
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
@@ -168,14 +169,20 @@ export default function SystemLogsPage() {
 
   // --- Activity filters ---
   const filteredActivity = useMemo(() => {
+    let timeStart: Date | null = null;
+    if (activityFilterTime === "today") timeStart = startOfDay(new Date());
+    else if (activityFilterTime === "week") timeStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    else if (activityFilterTime === "month") timeStart = startOfMonth(new Date());
+
     return activityLogs.filter(l => {
       if (activityFilterCategory !== "all" && l.category !== activityFilterCategory) return false;
       if (activityFilterOrg === "none" && l.org_id) return false;
       if (activityFilterOrg !== "all" && activityFilterOrg !== "none" && l.org_id !== activityFilterOrg) return false;
+      if (timeStart && !isAfter(new Date(l.created_at), timeStart)) return false;
       if (activitySearch && !l.action.includes(activitySearch) && !l.target_name.includes(activitySearch) && !l.detail.includes(activitySearch) && !(l.user_name || "").includes(activitySearch)) return false;
       return true;
     });
-  }, [activityLogs, activityFilterCategory, activityFilterOrg, activitySearch]);
+  }, [activityLogs, activityFilterCategory, activityFilterOrg, activityFilterTime, activitySearch]);
 
   const labels = {
     title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
@@ -191,6 +198,10 @@ export default function SystemLogsPage() {
     noLogs: { zh: "暫無紀錄", en: "No logs found", ja: "ログなし" },
     totalLogs: { zh: "共 {count} 筆紀錄", en: "{count} logs", ja: "{count} 件のログ" },
     exportExcel: { zh: "匯出 Excel", en: "Export Excel", ja: "Excelエクスポート" },
+    allTime: { zh: "所有時間", en: "All Time", ja: "全期間" },
+    today: { zh: "今天", en: "Today", ja: "今日" },
+    thisWeek: { zh: "本週", en: "This Week", ja: "今週" },
+    thisMonth: { zh: "本月", en: "This Month", ja: "今月" },
   };
 
   const handleExportDeviceExcel = () => {
@@ -336,6 +347,17 @@ export default function SystemLogsPage() {
                 {Object.entries(ACTIVITY_CATEGORY_CONFIG).map(([key, cfg]) => (
                   <SelectItem key={key} value={key}>{cfg.label[language]}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={activityFilterTime} onValueChange={setActivityFilterTime}>
+              <SelectTrigger className="w-[130px]">
+                <CalendarClock className="w-4 h-4 mr-2 text-muted-foreground" /><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{labels.allTime[language]}</SelectItem>
+                <SelectItem value="today">{labels.today[language]}</SelectItem>
+                <SelectItem value="week">{labels.thisWeek[language]}</SelectItem>
+                <SelectItem value="month">{labels.thisMonth[language]}</SelectItem>
               </SelectContent>
             </Select>
             {isAdmin && orgs.length > 0 && (
