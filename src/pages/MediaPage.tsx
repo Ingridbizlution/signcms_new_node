@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -686,6 +686,7 @@ export default function MediaPage() {
               {previewItem?.type === "widget" ? <Code2 className="w-5 h-5 text-primary shrink-0" /> : previewItem?.type === "image" ? <FileImage className="w-5 h-5 text-primary shrink-0" /> : <FileVideo className="w-5 h-5 text-primary shrink-0" />}
               <span className="truncate">{previewItem?.name}</span>
             </DialogTitle>
+            <DialogDescription className="sr-only">素材預覽對話框，可檢視圖片、影片或 Widget 預覽內容。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
@@ -735,8 +736,11 @@ export default function MediaPage() {
       {/* Widget Creation Dialog */}
       <Dialog open={widgetDialogOpen} onOpenChange={setWidgetDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Code2 className="w-5 h-5 text-primary" />{t("mediaAddWidget")}</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Code2 className="w-5 h-5 text-primary" />{t("mediaAddWidget")}</DialogTitle>
+            <DialogDescription className="sr-only">建立與調整 Widget 設定，並在對話框底部即時預覽結果。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1 min-h-0">
             <div className="space-y-2">
               <Label>{t("widgetName")} *</Label>
               <Input value={widgetForm.name} onChange={(e) => setWidgetForm({ ...widgetForm, name: e.target.value })} placeholder={t("widgetNamePlaceholder")} />
@@ -938,32 +942,34 @@ export default function MediaPage() {
             {/* Live Preview */}
             <div className="space-y-2">
               <Label>{t("mediaPreviewUnavailable").replace("（範例素材）", "").replace("(sample)", "Preview")}</Label>
-              <div className="aspect-video rounded-lg overflow-hidden border border-border">
-                <AnimatedWidgetWrapper config={{
-                  animation: widgetForm.animation,
-                  widgetType: widgetForm.widgetType,
-                }}>
-                  <WidgetLivePreview config={{
-                    widgetType: widgetForm.widgetType,
-                    url: widgetForm.url,
-                    text: widgetForm.text,
-                    speed: widgetForm.speed,
-                    format: widgetForm.format,
-                    clockStyle: widgetForm.clockStyle,
-                    showDate: widgetForm.showDate,
-                    timezone: widgetForm.timezone,
-                    bgColor: widgetForm.bgColor,
-                    textColor: widgetForm.textColor,
-                    qrcodeContent: widgetForm.qrcodeContent,
-                    targetDate: widgetForm.targetDate,
-                    countdownTitle: widgetForm.countdownTitle,
-                    youtubeUrl: widgetForm.youtubeUrl,
-                    city: widgetForm.city,
-                    fontSize: widgetForm.fontSize,
-                    qrcodeSize: widgetForm.qrcodeSize,
+              <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted/30 shrink-0">
+                <div className="w-full h-full overflow-hidden">
+                  <AnimatedWidgetWrapper config={{
                     animation: widgetForm.animation,
-                  }} />
-                </AnimatedWidgetWrapper>
+                    widgetType: widgetForm.widgetType,
+                  }}>
+                    <WidgetLivePreview config={{
+                      widgetType: widgetForm.widgetType,
+                      url: widgetForm.url,
+                      text: widgetForm.text,
+                      speed: widgetForm.speed,
+                      format: widgetForm.format,
+                      clockStyle: widgetForm.clockStyle,
+                      showDate: widgetForm.showDate,
+                      timezone: widgetForm.timezone,
+                      bgColor: widgetForm.bgColor,
+                      textColor: widgetForm.textColor,
+                      qrcodeContent: widgetForm.qrcodeContent,
+                      targetDate: widgetForm.targetDate,
+                      countdownTitle: widgetForm.countdownTitle,
+                      youtubeUrl: widgetForm.youtubeUrl,
+                      city: widgetForm.city,
+                      fontSize: widgetForm.fontSize,
+                      qrcodeSize: widgetForm.qrcodeSize,
+                      animation: widgetForm.animation,
+                    }} />
+                  </AnimatedWidgetWrapper>
+                </div>
               </div>
             </div>
           </div>
