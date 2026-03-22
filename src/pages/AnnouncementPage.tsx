@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Megaphone, Upload, CalendarIcon, Send, Monitor, Smartphone, Trash2, ImageIcon } from "lucide-react";
+import { Megaphone, Upload, CalendarIcon, Send, Monitor, Smartphone, Trash2, ImageIcon, Pin } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -19,12 +20,22 @@ interface Announcement {
   id: string;
   subject: string;
   department: string;
+  category: string;
+  pinned: boolean;
   content: string;
   imageUrl: string | null;
   startDate: Date;
   endDate: Date;
   createdAt: Date;
 }
+
+const CATEGORIES = [
+  { value: "general", label: { zh: "一般公告", en: "General", ja: "一般" } },
+  { value: "urgent", label: { zh: "緊急通知", en: "Urgent", ja: "緊急" } },
+  { value: "event", label: { zh: "活動公告", en: "Event", ja: "イベント" } },
+  { value: "policy", label: { zh: "政策規章", en: "Policy", ja: "規定" } },
+  { value: "maintenance", label: { zh: "維護公告", en: "Maintenance", ja: "メンテナンス" } },
+];
 
 const DEPARTMENTS = [
   { value: "hq", label: { zh: "總管理處", en: "Headquarters", ja: "本部" } },
@@ -40,6 +51,8 @@ const AnnouncementPage = () => {
   // Form state
   const [subject, setSubject] = useState("");
   const [department, setDepartment] = useState("");
+  const [category, setCategory] = useState("");
+  const [pinned, setPinned] = useState(false);
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -71,6 +84,10 @@ const AnnouncementPage = () => {
     subjectPh: { zh: "例如：年終大特賣、緊急停電通知", en: "e.g. Year-End Sale, Emergency Notice", ja: "例：年末セール、緊急停電通知" },
     dept: { zh: "發佈單位", en: "Department", ja: "発信部署" },
     deptPh: { zh: "選擇發佈單位", en: "Select department", ja: "部署を選択" },
+    categoryLabel: { zh: "公告類別", en: "Category", ja: "カテゴリ" },
+    categoryPh: { zh: "選擇公告類別", en: "Select category", ja: "カテゴリを選択" },
+    pinnedLabel: { zh: "重要公告置頂", en: "Pin as Important", ja: "重要：トップに固定" },
+    pinnedDesc: { zh: "開啟後此公告將置頂顯示", en: "This announcement will be pinned to the top", ja: "このお知らせをトップに固定します" },
     contentLabel: { zh: "公告內容", en: "Content", ja: "内容" },
     contentPh: { zh: "輸入公告的詳細內容…", en: "Enter announcement details…", ja: "お知らせの詳細を入力…" },
     imageLabel: { zh: "附件圖片", en: "Attachment Image", ja: "添付画像" },
@@ -87,6 +104,7 @@ const AnnouncementPage = () => {
     statusExpired: { zh: "已過期", en: "Expired", ja: "終了" },
     statusPending: { zh: "尚未開始", en: "Pending", ja: "配信前" },
     colSubject: { zh: "主旨", en: "Subject", ja: "件名" },
+    colCategory: { zh: "類別", en: "Category", ja: "カテゴリ" },
     colDept: { zh: "發佈單位", en: "Department", ja: "部署" },
     colPeriod: { zh: "時間區間", en: "Period", ja: "期間" },
     colStatus: { zh: "狀態", en: "Status", ja: "ステータス" },
@@ -95,6 +113,7 @@ const AnnouncementPage = () => {
     successPublish: { zh: "公告已成功發佈！", en: "Announcement published!", ja: "お知らせを公開しました！" },
     errorFill: { zh: "請填寫主旨、內容、起訖時間", en: "Please fill in subject, content, and dates", ja: "件名・内容・日時を入力してください" },
     deleted: { zh: "已刪除公告", en: "Announcement deleted", ja: "お知らせを削除しました" },
+    pinnedTag: { zh: "📌 置頂", en: "📌 Pinned", ja: "📌 固定" },
   };
 
   const t = (key: keyof typeof texts) => texts[key][language];
@@ -121,6 +140,8 @@ const AnnouncementPage = () => {
       id: crypto.randomUUID(),
       subject,
       department,
+      category,
+      pinned,
       content,
       imageUrl,
       startDate,
@@ -131,9 +152,10 @@ const AnnouncementPage = () => {
     setAnnouncements(updated);
     localStorage.setItem("signboard-announcements", JSON.stringify(updated));
     toast.success(t("successPublish"));
-    // Reset form
     setSubject("");
     setDepartment("");
+    setCategory("");
+    setPinned(false);
     setContent("");
     setImageUrl(null);
     setStartDate(undefined);
@@ -168,6 +190,20 @@ const AnnouncementPage = () => {
     const d = DEPARTMENTS.find((x) => x.value === val);
     return d ? d.label[language] : val || "—";
   };
+
+  const categoryLabel = (val: string) => {
+    const c = CATEGORIES.find((x) => x.value === val);
+    return c ? c.label[language] : val || "—";
+  };
+
+  // Sort: pinned first, then by createdAt
+  const sortedAnnouncements = useMemo(() => {
+    return [...announcements].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+  }, [announcements]);
 
   const hasContent = subject || content || imageUrl;
 
@@ -223,6 +259,35 @@ const AnnouncementPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">{t("categoryLabel")}</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder={t("categoryPh")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value} className="text-base">
+                        {c.label[language]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Pinned */}
+              <div className="flex items-center justify-between rounded-xl border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Pin className="h-4 w-4 text-amber-500" />
+                    {t("pinnedLabel")}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">{t("pinnedDesc")}</p>
+                </div>
+                <Switch checked={pinned} onCheckedChange={setPinned} />
               </div>
 
               {/* Content */}
@@ -436,6 +501,7 @@ const AnnouncementPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-base">{t("colSubject")}</TableHead>
+                    <TableHead className="text-base">{t("colCategory")}</TableHead>
                     <TableHead className="text-base">{t("colDept")}</TableHead>
                     <TableHead className="text-base">{t("colPeriod")}</TableHead>
                     <TableHead className="text-base">{t("colStatus")}</TableHead>
@@ -443,11 +509,15 @@ const AnnouncementPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {announcements.map((a) => {
+                  {sortedAnnouncements.map((a) => {
                     const status = getStatus(a);
                     return (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-semibold text-base max-w-[240px] truncate">{a.subject}</TableCell>
+                      <TableRow key={a.id} className={a.pinned ? "bg-amber-500/5" : ""}>
+                        <TableCell className="font-semibold text-base max-w-[240px] truncate">
+                          {a.pinned && <Badge variant="outline" className="mr-2 border-amber-500 text-amber-600 text-[10px]">{t("pinnedTag")}</Badge>}
+                          {a.subject}
+                        </TableCell>
+                        <TableCell className="text-base">{categoryLabel(a.category)}</TableCell>
                         <TableCell className="text-base">{deptLabel(a.department)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {format(a.startDate, "yyyy/MM/dd")} – {format(a.endDate, "yyyy/MM/dd")}
