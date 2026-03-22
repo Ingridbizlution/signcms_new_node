@@ -18,7 +18,8 @@ import {
   Utensils, PartyPopper, ShoppingBag, Sun, Gift, Coffee,
   X, Plus, AlignLeft, AlignCenter, AlignRight, Minus,
   Save, FolderOpen, FilePlus, ChevronLeft, ChevronRightIcon, Play, Pause,
-  Layers, Code2, Clock, Calendar, Globe, CloudSun, QrCode, Timer, Youtube, Move, Maximize2, Lock, Unlock, Check
+  Layers, Code2, Clock, Calendar, Globe, CloudSun, QrCode, Timer, Youtube, Move, Maximize2, Lock, Unlock, Check,
+  Search, ArrowUpDown, ArrowDownAZ, ArrowUpAZ
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QRCodeSVG } from "qrcode.react";
@@ -218,8 +219,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   zone: Zone;
   onUpdate: (content: ZoneContent) => void;
   onClose: () => void;
-  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[];
-  dbWidgets: { id: string; name: string; url: string }[];
+  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null; created_at?: string }[];
+  dbWidgets: { id: string; name: string; url: string; created_at?: string }[];
   isEmbedded?: boolean;
 }) {
   const { t } = useLanguage();
@@ -227,14 +228,17 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   const mediaItems = content.mediaItems || [];
   const [showContentPicker, setShowContentPicker] = useState(false);
   const [selectedPickerIds, setSelectedPickerIds] = useState<Set<string>>(new Set());
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerFilter, setPickerFilter] = useState<"all" | "image" | "video" | "widget">("all");
+  const [pickerSort, setPickerSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
 
   const pickerItems = useMemo(() => {
-    const items: { id: string; kind: "media" | "widget"; name: string; type?: string; icon: React.ReactNode; raw: any }[] = [];
+    const items: { id: string; kind: "media" | "widget"; name: string; type?: string; icon: React.ReactNode; raw: any; createdAt?: string }[] = [];
     dbMedia.forEach((m) => {
       items.push({
         id: `media-${m.id}`, kind: "media", name: m.name, type: m.type,
         icon: m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-primary shrink-0" /> : <Film className="w-3.5 h-3.5 text-primary shrink-0" />,
-        raw: m,
+        raw: m, createdAt: m.created_at,
       });
     });
     dbWidgets.forEach((w) => {
@@ -244,11 +248,29 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
       items.push({
         id: `widget-${w.id}`, kind: "widget", name: w.name,
         icon: <WidgetIcon className="w-3.5 h-3.5 text-accent-foreground shrink-0" />,
-        raw: { ...w, config },
+        raw: { ...w, config }, createdAt: w.created_at,
       });
     });
     return items;
   }, [dbMedia, dbWidgets]);
+
+  const filteredPickerItems = useMemo(() => {
+    let filtered = pickerItems;
+    if (pickerFilter === "image") filtered = filtered.filter((i) => i.kind === "media" && i.type === "image");
+    else if (pickerFilter === "video") filtered = filtered.filter((i) => i.kind === "media" && i.type === "video");
+    else if (pickerFilter === "widget") filtered = filtered.filter((i) => i.kind === "widget");
+    if (pickerSearch.trim()) {
+      const q = pickerSearch.trim().toLowerCase();
+      filtered = filtered.filter((i) => i.name.toLowerCase().includes(q));
+    }
+    filtered = [...filtered].sort((a, b) => {
+      if (pickerSort === "name-asc") return a.name.localeCompare(b.name);
+      if (pickerSort === "name-desc") return b.name.localeCompare(a.name);
+      if (pickerSort === "newest") return (b.createdAt || "").localeCompare(a.createdAt || "");
+      return (a.createdAt || "").localeCompare(b.createdAt || "");
+    });
+    return filtered;
+  }, [pickerItems, pickerFilter, pickerSearch, pickerSort]);
 
   const togglePickerItem = (id: string) => {
     setSelectedPickerIds((prev) => {
@@ -279,6 +301,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
     onUpdate(updatedContent);
     setSelectedPickerIds(new Set());
     setShowContentPicker(false);
+    setPickerSearch("");
+    setPickerFilter("all");
   };
 
   const addMedia = (m: typeof dbMedia[0]) => {
@@ -298,7 +322,7 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" /> {t("studioContentPicker")}</label>
-            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => { setShowContentPicker(!showContentPicker); setSelectedPickerIds(new Set()); }}>
+            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => { setShowContentPicker(!showContentPicker); setSelectedPickerIds(new Set()); setPickerSearch(""); setPickerFilter("all"); }}>
               <Plus className="w-3 h-3" /> {t("studioAddContent")}
             </Button>
           </div>
@@ -366,12 +390,46 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
 
           {/* Unified multi-select picker */}
           {showContentPicker && (
-            <div className="mt-2 border border-border rounded-md p-2 bg-card max-h-40 overflow-y-auto space-y-0.5">
-              {pickerItems.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
-              ) : (
-                <>
-                  {pickerItems.map((item) => {
+            <div className="mt-2 border border-border rounded-md p-2 bg-card space-y-1.5">
+              {/* Search bar */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                <Input
+                  className="h-7 text-[11px] pl-7 pr-2"
+                  placeholder={t("pickerSearchPlaceholder")}
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                />
+              </div>
+              {/* Filter & Sort row */}
+              <div className="flex items-center gap-1">
+                <div className="flex gap-0.5 flex-1">
+                  {(["all", "image", "video", "widget"] as const).map((f) => (
+                    <Button key={f} variant={pickerFilter === f ? "default" : "ghost"} size="sm"
+                      className="h-5 text-[9px] px-1.5 flex-1"
+                      onClick={() => setPickerFilter(f)}>
+                      {t(`pickerFilter_${f}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title={t("pickerSort")}
+                  onClick={() => {
+                    const order: Array<typeof pickerSort> = ["name-asc", "name-desc", "newest", "oldest"];
+                    setPickerSort(order[(order.indexOf(pickerSort) + 1) % order.length]);
+                  }}>
+                  {pickerSort === "name-asc" ? <ArrowDownAZ className="w-3 h-3" /> :
+                   pickerSort === "name-desc" ? <ArrowUpAZ className="w-3 h-3" /> :
+                   <ArrowUpDown className="w-3 h-3" />}
+                </Button>
+              </div>
+              {/* Sort indicator */}
+              <p className="text-[9px] text-muted-foreground">{t(`pickerSort_${pickerSort}`)}</p>
+              {/* Items list */}
+              <div className="max-h-32 overflow-y-auto space-y-0.5">
+                {filteredPickerItems.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                ) : (
+                  filteredPickerItems.map((item) => {
                     const isSelected = selectedPickerIds.has(item.id);
                     return (
                       <button key={item.id} className={`w-full flex items-center gap-2 p-1.5 rounded text-left text-xs transition-colors ${isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"}`}
@@ -384,17 +442,17 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
                         <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{item.kind === "media" ? (item.type === "image" ? "IMG" : "VID") : "Widget"}</Badge>
                       </button>
                     );
-                  })}
-                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
-                    <span className="text-[10px] text-muted-foreground">
-                      {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
-                    </span>
-                    <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
-                      <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
-                    </Button>
-                  </div>
-                </>
-              )}
+                  })
+                )}
+              </div>
+              <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                <span className="text-[10px] text-muted-foreground">
+                  {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
+                </span>
+                <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
+                  <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -631,11 +689,11 @@ export default function ContentStudioPage() {
   const [saving, setSaving] = useState(false);
 
   // DB media for picker
-  const [dbMedia, setDbMedia] = useState<{ id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[]>([]);
-  const [dbWidgets, setDbWidgets] = useState<{ id: string; name: string; url: string }[]>([]);
+  const [dbMedia, setDbMedia] = useState<{ id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null; created_at?: string }[]>([]);
+  const [dbWidgets, setDbWidgets] = useState<{ id: string; name: string; url: string; created_at?: string }[]>([]);
 
   useEffect(() => {
-    (supabase as any).from("media_items").select("id, name, type, url, thumbnail, duration").order("created_at", { ascending: false }).then((res: any) => {
+    (supabase as any).from("media_items").select("id, name, type, url, thumbnail, duration, created_at").order("created_at", { ascending: false }).then((res: any) => {
       const all = res.data || [];
       setDbMedia(all.filter((m: any) => m.type !== "widget"));
       setDbWidgets(all.filter((m: any) => m.type === "widget"));
