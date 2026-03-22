@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Megaphone, Upload, CalendarIcon, Send, Monitor, Smartphone, Trash2, ImageIcon, Pin } from "lucide-react";
+import { Megaphone, Upload, CalendarIcon, Send, Monitor, Smartphone, Trash2, ImageIcon, Pin, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,7 @@ const AnnouncementPage = () => {
     errorFill: { zh: "請填寫主旨、內容、起訖時間", en: "Please fill in subject, content, and dates", ja: "件名・内容・日時を入力してください" },
     deleted: { zh: "已刪除公告", en: "Announcement deleted", ja: "お知らせを削除しました" },
     pinnedTag: { zh: "📌 置頂", en: "📌 Pinned", ja: "📌 固定" },
+    successEdit: { zh: "公告已更新", en: "Announcement updated", ja: "お知らせを更新しました" },
   };
 
   const t = (key: keyof typeof texts) => texts[key][language];
@@ -161,6 +162,30 @@ const AnnouncementPage = () => {
     setStartDate(undefined);
     setEndDate(undefined);
   };
+
+  // Editing state for list items
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCategory, setEditCategory] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
+
+  const startEditing = (a: Announcement) => {
+    setEditingId(a.id);
+    setEditCategory(a.category);
+    setEditDepartment(a.department);
+  };
+
+  const saveEditing = () => {
+    if (!editingId) return;
+    const updated = announcements.map((a) =>
+      a.id === editingId ? { ...a, category: editCategory, department: editDepartment } : a
+    );
+    setAnnouncements(updated);
+    localStorage.setItem("signboard-announcements", JSON.stringify(updated));
+    setEditingId(null);
+    toast.success(texts.successEdit[language]);
+  };
+
+  const cancelEditing = () => setEditingId(null);
 
   const handleDelete = (id: string) => {
     const updated = announcements.filter((a) => a.id !== id);
@@ -517,16 +542,54 @@ const AnnouncementPage = () => {
                           {a.pinned && <Badge variant="outline" className="mr-2 border-amber-500 text-amber-600 text-[10px]">{t("pinnedTag")}</Badge>}
                           {a.subject}
                         </TableCell>
-                        <TableCell className="text-base">{categoryLabel(a.category)}</TableCell>
-                        <TableCell className="text-base">{deptLabel(a.department)}</TableCell>
+                        <TableCell className="text-base">
+                          {editingId === a.id ? (
+                            <Select value={editCategory} onValueChange={setEditCategory}>
+                              <SelectTrigger className="h-9 text-sm w-[130px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {CATEGORIES.map((c) => (
+                                  <SelectItem key={c.value} value={c.value}>{c.label[language]}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : categoryLabel(a.category)}
+                        </TableCell>
+                        <TableCell className="text-base">
+                          {editingId === a.id ? (
+                            <Select value={editDepartment} onValueChange={setEditDepartment}>
+                              <SelectTrigger className="h-9 text-sm w-[130px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {DEPARTMENTS.map((d) => (
+                                  <SelectItem key={d.value} value={d.value}>{d.label[language]}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : deptLabel(a.department)}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {format(a.startDate, "yyyy/MM/dd")} – {format(a.endDate, "yyyy/MM/dd")}
                         </TableCell>
                         <TableCell>{statusBadge(status)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(a.id)} className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <TableCell className="text-right space-x-1">
+                          {editingId === a.id ? (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={saveEditing} className="text-emerald-600 hover:text-emerald-700">
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={cancelEditing} className="text-muted-foreground">
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => startEditing(a)} className="text-muted-foreground hover:text-foreground">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDelete(a.id)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
