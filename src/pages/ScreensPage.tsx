@@ -309,7 +309,7 @@ export default function ScreensPage() {
         </Select>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" title="網路速度閾值設定">
+            <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
               <SlidersHorizontal className="w-4 h-4" />
             </Button>
           </PopoverTrigger>
