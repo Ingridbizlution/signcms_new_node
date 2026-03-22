@@ -118,6 +118,7 @@ const translations = {
   mediaUploaded: { zh: "已上傳", en: "Uploaded", ja: "アップロード済み" },
   mediaDeleted: { zh: "已刪除", en: "Deleted", ja: "削除済み" },
   mediaUnsupported: { zh: "不支援的檔案格式", en: "Unsupported file format", ja: "サポートされていないファイル形式" },
+  mediaFileTooLarge: { zh: "檔案大小超過限制（最大 1.5 MB）", en: "File too large (max 1.5 MB)", ja: "ファイルが大きすぎます（最大 1.5 MB）" },
   mediaReading: { zh: "讀取中...", en: "Loading...", ja: "読み込み中..." },
   mediaProjectGroup: { zh: "設計專案", en: "Project Group", ja: "デザインプロジェクト" },
   mediaAllProjects: { zh: "全部專案", en: "All Projects", ja: "全プロジェクト" },
