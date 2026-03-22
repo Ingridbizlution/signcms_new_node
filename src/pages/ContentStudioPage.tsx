@@ -457,7 +457,8 @@ export default function ContentStudioPage() {
         {/* Canvas area */}
         <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-xl border border-border relative overflow-hidden min-h-0">
           <div
-            className="relative bg-card rounded-lg shadow-lg border border-border overflow-hidden transition-all duration-300"
+            ref={canvasRef}
+            className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`}
             style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}
           >
             {zones.map((zone) => {
