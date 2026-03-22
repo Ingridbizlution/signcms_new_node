@@ -123,6 +123,7 @@ const initialMedia: MediaItem[] = [
 ];
 
 export default function MediaPage() {
+  const { isAdmin } = useUserRole();
   const [media, setMedia] = useState<MediaItem[]>(initialMedia);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
