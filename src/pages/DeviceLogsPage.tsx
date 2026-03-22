@@ -398,7 +398,7 @@ export default function SystemLogsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredActivity.map((log) => {
+                  {paginatedActivity.map((log) => {
                     const colors = getActionColor(log.action, log.category);
                     return (
                       <TableRow key={log.id} className={`${colors.bg} border-b border-border/50 transition-colors`}>
@@ -429,6 +429,21 @@ export default function SystemLogsPage() {
                   })}
                 </TableBody>
               </Table>
+              {activityTotalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground">
+                    {{ zh: `第 ${activityPage} / ${activityTotalPages} 頁`, en: `Page ${activityPage} of ${activityTotalPages}`, ja: `${activityPage} / ${activityTotalPages} ページ` }[language]}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={activityPage <= 1} onClick={() => setActivityPage(p => p - 1)}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={activityPage >= activityTotalPages} onClick={() => setActivityPage(p => p + 1)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           )}
         </TabsContent>
