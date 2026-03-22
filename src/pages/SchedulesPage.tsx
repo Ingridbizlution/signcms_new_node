@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   CalendarClock,
   Plus,
@@ -137,6 +138,7 @@ const emptyForm = {
 };
 
 export default function SchedulesPage() {
+  const { isAdmin } = useUserRole();
   const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -291,10 +293,12 @@ export default function SchedulesPage() {
             設定各螢幕的播放內容與時段
           </p>
         </div>
-        <Button onClick={openAdd} className="gap-2 self-start">
-          <Plus className="w-4 h-4" />
-          新增排程
-        </Button>
+        {isAdmin && (
+          <Button onClick={openAdd} className="gap-2 self-start">
+            <Plus className="w-4 h-4" />
+            新增排程
+          </Button>
+        )}
       </div>
 
       {schedules.length === 0 && (
@@ -360,10 +364,12 @@ export default function SchedulesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Switch
-                  checked={schedule.enabled}
-                  onCheckedChange={() => toggleEnabled(schedule.id)}
-                />
+                {isAdmin && (
+                  <Switch
+                    checked={schedule.enabled}
+                    onCheckedChange={() => toggleEnabled(schedule.id)}
+                  />
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -380,22 +386,26 @@ export default function SchedulesPage() {
                     <ChevronDown className="w-4 h-4" />
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => openEdit(schedule)}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => setDeleteId(schedule.id)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {isAdmin && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEdit(schedule)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => setDeleteId(schedule.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 

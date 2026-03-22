@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Monitor, Plus, Pencil, Trash2, Search, MapPin } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ const initialScreens: Screen[] = [
 const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080" };
 
 export default function ScreensPage() {
+  const { isAdmin } = useUserRole();
   const [screens, setScreens] = useState<Screen[]>(initialScreens);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
@@ -117,10 +119,12 @@ export default function ScreensPage() {
           <h1 className="text-2xl font-bold text-foreground">螢幕管理</h1>
           <p className="text-sm text-muted-foreground mt-1">管理所有分店的電子看板設備</p>
         </div>
-        <Button onClick={openAdd} className="gap-2 self-start">
-          <Plus className="w-4 h-4" />
-          新增螢幕
-        </Button>
+        {isAdmin && (
+          <Button onClick={openAdd} className="gap-2 self-start">
+            <Plus className="w-4 h-4" />
+            新增螢幕
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -178,14 +182,16 @@ export default function ScreensPage() {
                 <span>{screen.resolution}</span>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}>
-                <Pencil className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
       </div>

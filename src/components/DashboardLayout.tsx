@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Upload, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "使用者";
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -31,10 +33,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="gap-2 transition-transform duration-200 hover:scale-105">
-                <Upload className="w-4 h-4" />
-                上傳素材
-              </Button>
+              {isAdmin && (
+                <Button size="sm" className="gap-2 transition-transform duration-200 hover:scale-105">
+                  <Upload className="w-4 h-4" />
+                  上傳素材
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-8 h-8">

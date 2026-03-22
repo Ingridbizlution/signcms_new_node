@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Image,
   Film,
@@ -122,6 +123,7 @@ const initialMedia: MediaItem[] = [
 ];
 
 export default function MediaPage() {
+  const { isAdmin } = useUserRole();
   const [media, setMedia] = useState<MediaItem[]>(initialMedia);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -224,20 +226,22 @@ export default function MediaPage() {
             管理所有廣告圖片與影片素材 · {imageCount} 張圖片 · {videoCount} 部影片
           </p>
         </div>
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            className="hidden"
-            onChange={handleUpload}
-          />
-          <Button onClick={() => fileInputRef.current?.click()} className="gap-2">
-            <Upload className="w-4 h-4" />
-            上傳素材
-          </Button>
-        </div>
+        {isAdmin && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="hidden"
+              onChange={handleUpload}
+            />
+            <Button onClick={() => fileInputRef.current?.click()} className="gap-2">
+              <Upload className="w-4 h-4" />
+              上傳素材
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filters & View Toggle */}
@@ -392,17 +396,19 @@ export default function MediaPage() {
                 >
                   <Eye className="w-4 h-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteId(item.id);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(item.id);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </Card>
           ))}
