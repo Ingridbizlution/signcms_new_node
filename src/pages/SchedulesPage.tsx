@@ -212,6 +212,7 @@ export default function SchedulesPage() {
       }));
       await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedUpdated"));
+      logActivity({ action: "編輯排程", category: "schedule", targetName: form.name, targetId: editingId! });
     } else {
       const { data: newSched, error } = await (supabase as any).from("schedules").insert({
         name: form.name, screen_id: form.screen_id, start_time: form.startTime,
