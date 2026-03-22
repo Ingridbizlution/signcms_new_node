@@ -864,7 +864,7 @@ const MediaPage = () => {
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }} title={t("mediaPreview")}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }} title={t("mediaTitle")}>
                   <Eye className="w-4 h-4" />
                 </Button>
                 {isAdmin && !item.is_system && (
