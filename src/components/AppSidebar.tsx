@@ -44,6 +44,7 @@ export function AppSidebar() {
     { titleKey: "navSchedules" as const, url: "/schedules", icon: CalendarClock, adminOnly: false },
     { titleKey: "navPublishing" as const, url: "/publishing", icon: Send, adminOnly: false },
     { titleKey: "navDeviceLogs" as const, url: "/device-logs", icon: FileText, adminOnly: false },
+    { titleKey: "navIoTDashboard" as const, url: "/iot-dashboard", icon: Radio, adminOnly: false },
     { titleKey: "navAdmin" as const, url: "/admin", icon: ShieldCheck, adminOnly: true },
   ];
 
