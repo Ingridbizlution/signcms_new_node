@@ -453,7 +453,7 @@ function WidgetZonePreview({ config }: { config: any }) {
   if (config.widgetType === "marquee" && config.text) {
     return (
       <div className="w-full h-full flex items-center overflow-hidden" style={{ background: bg, color: fg }}>
-        <div className="animate-marquee whitespace-nowrap text-sm font-medium">{config.text}</div>
+        <div className={`animate-marquee whitespace-nowrap ${zfs.marquee} font-medium`}>{config.text}</div>
       </div>
     );
   }
