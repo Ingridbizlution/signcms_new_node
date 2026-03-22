@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Building2, Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface Org {
   id: string;
