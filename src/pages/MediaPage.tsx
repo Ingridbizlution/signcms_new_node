@@ -686,6 +686,7 @@ export default function MediaPage() {
               {previewItem?.type === "widget" ? <Code2 className="w-5 h-5 text-primary shrink-0" /> : previewItem?.type === "image" ? <FileImage className="w-5 h-5 text-primary shrink-0" /> : <FileVideo className="w-5 h-5 text-primary shrink-0" />}
               <span className="truncate">{previewItem?.name}</span>
             </DialogTitle>
+            <DialogDescription className="sr-only">素材預覽對話框，可檢視圖片、影片或 Widget 預覽內容。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden">
