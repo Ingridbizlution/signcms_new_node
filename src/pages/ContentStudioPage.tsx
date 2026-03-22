@@ -393,6 +393,14 @@ function WidgetZonePreview({ config }: { config: any }) {
   if (!config) return null;
   const bg = config.bgColor || "#1a1a2e";
   const fg = config.textColor || "#ffffff";
+  const fontSize = config.fontSize || "medium";
+  const ZONE_FS: Record<string, Record<string, string>> = {
+    small: { time: "text-base", title: "text-xs", countdown: "text-base", marquee: "text-xs" },
+    medium: { time: "text-2xl", title: "text-[10px]", countdown: "text-lg", marquee: "text-sm" },
+    large: { time: "text-3xl", title: "text-sm", countdown: "text-2xl", marquee: "text-lg" },
+    xlarge: { time: "text-4xl", title: "text-base", countdown: "text-3xl", marquee: "text-xl" },
+  };
+  const zfs = ZONE_FS[fontSize] || ZONE_FS.medium;
 
   if (config.widgetType === "clock") {
     const tz = config.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -427,7 +435,7 @@ function WidgetZonePreview({ config }: { config: any }) {
     const timeStr = now.toLocaleTimeString("en-US", opts);
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
-        <span className="text-2xl font-mono font-bold tracking-wider">{timeStr}</span>
+        <span className={`${zfs.time} font-mono font-bold tracking-wider`}>{timeStr}</span>
         {config.showDate && <span className="text-[10px] opacity-60">{now.toLocaleDateString("zh-TW", { month: "short", day: "numeric", timeZone: tz })}</span>}
       </div>
     );
@@ -445,7 +453,7 @@ function WidgetZonePreview({ config }: { config: any }) {
   if (config.widgetType === "marquee" && config.text) {
     return (
       <div className="w-full h-full flex items-center overflow-hidden" style={{ background: bg, color: fg }}>
-        <div className="animate-marquee whitespace-nowrap text-sm font-medium">{config.text}</div>
+        <div className={`animate-marquee whitespace-nowrap ${zfs.marquee} font-medium`}>{config.text}</div>
       </div>
     );
   }
@@ -460,9 +468,10 @@ function WidgetZonePreview({ config }: { config: any }) {
   }
 
   if (config.widgetType === "qrcode") {
+    const qrSize = config.qrcodeSize ? Math.min(config.qrcodeSize, 120) : 80;
     return (
       <div className="w-full h-full flex items-center justify-center" style={{ background: bg }}>
-        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={80} bgColor={bg} fgColor={fg} level="M" />
+        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={qrSize} bgColor={bg} fgColor={fg} level="M" />
       </div>
     );
   }
@@ -476,10 +485,10 @@ function WidgetZonePreview({ config }: { config: any }) {
     const secs = Math.floor((diff % 60000) / 1000);
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
-        {config.countdownTitle && <span className="text-[10px] font-bold opacity-70">{config.countdownTitle}</span>}
+        {config.countdownTitle && <span className={`${zfs.title} font-bold opacity-70`}>{config.countdownTitle}</span>}
         <div className="flex gap-2">
           {[days, hours, mins, secs].map((v, i) => (
-            <span key={i} className="text-lg font-mono font-bold">{String(v).padStart(2, "0")}</span>
+            <span key={i} className={`${zfs.countdown} font-mono font-bold`}>{String(v).padStart(2, "0")}</span>
           ))}
         </div>
       </div>

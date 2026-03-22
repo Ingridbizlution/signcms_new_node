@@ -41,6 +41,8 @@ interface WidgetConfig {
   countdownTitle?: string;
   youtubeUrl?: string;
   city?: string;
+  fontSize?: "small" | "medium" | "large" | "xlarge";
+  qrcodeSize?: number;
 }
 
 interface MediaItem {
@@ -118,8 +120,16 @@ function WidgetPreviewCard({ config }: { config: WidgetConfig }) {
   );
 }
 
+const FONT_SIZE_MAP = {
+  small: { time: "text-2xl", date: "text-xs", title: "text-sm", countdown: "text-2xl", marquee: "text-lg", weather: "text-xl", weatherCity: "text-sm", weatherIcon: "w-10 h-10" },
+  medium: { time: "text-4xl", date: "text-sm", title: "text-lg", countdown: "text-4xl", marquee: "text-2xl", weather: "text-3xl", weatherCity: "text-lg", weatherIcon: "w-16 h-16" },
+  large: { time: "text-6xl", date: "text-lg", title: "text-2xl", countdown: "text-6xl", marquee: "text-4xl", weather: "text-5xl", weatherCity: "text-xl", weatherIcon: "w-20 h-20" },
+  xlarge: { time: "text-8xl", date: "text-xl", title: "text-3xl", countdown: "text-8xl", marquee: "text-6xl", weather: "text-7xl", weatherCity: "text-2xl", weatherIcon: "w-24 h-24" },
+};
+
 function WidgetLivePreview({ config }: { config: WidgetConfig }) {
   const [now, setNow] = useState(new Date());
+  const fs = FONT_SIZE_MAP[config.fontSize || "medium"];
 
   useEffect(() => {
     if (config.widgetType === "clock" || config.widgetType === "date") {
@@ -190,8 +200,8 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
     const dateStr = config.showDate ? now.toLocaleDateString("zh-TW", { year: "numeric", month: "short", day: "numeric", weekday: "short", timeZone: tz }) : "";
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg" style={{ background: bg, color: fg }}>
-        <span className="text-4xl font-mono font-bold tracking-wider">{timeStr}</span>
-        {config.showDate && <span className="text-sm opacity-60">{dateStr}</span>}
+        <span className={`${fs.time} font-mono font-bold tracking-wider`}>{timeStr}</span>
+        {config.showDate && <span className={`${fs.date} opacity-60`}>{dateStr}</span>}
         {config.timezone && <span className="text-xs opacity-40">{config.timezone}</span>}
       </div>
     );
@@ -200,8 +210,8 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
   if (config.widgetType === "date") {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg" style={{ background: bg, color: fg }}>
-        <span className="text-lg font-medium opacity-70">{now.toLocaleDateString("zh-TW", { weekday: "long" })}</span>
-        <span className="text-3xl font-bold">{now.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric" })}</span>
+        <span className={`${fs.date} font-medium opacity-70`}>{now.toLocaleDateString("zh-TW", { weekday: "long" })}</span>
+        <span className={`${fs.title} font-bold`}>{now.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric" })}</span>
       </div>
     );
   }
@@ -224,7 +234,7 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
     const speed = config.speed === "slow" ? "30s" : config.speed === "fast" ? "8s" : "15s";
     return (
       <div className="w-full h-full flex items-center overflow-hidden rounded-lg" style={{ background: bg, color: fg }}>
-        <div className="whitespace-nowrap animate-marquee text-2xl font-bold" style={{ animationDuration: speed }}>
+        <div className={`whitespace-nowrap animate-marquee ${fs.marquee} font-bold`} style={{ animationDuration: speed }}>
           {config.text || "Marquee Text"}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{config.text || "Marquee Text"}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         </div>
       </div>
@@ -232,9 +242,10 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
   }
 
   if (config.widgetType === "qrcode") {
+    const qrSize = config.qrcodeSize || 140;
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-lg" style={{ background: bg, color: fg }}>
-        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={140} bgColor={bg} fgColor={fg} level="M" />
+        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={qrSize} bgColor={bg} fgColor={fg} level="M" />
         {config.qrcodeContent && <span className="text-[10px] opacity-50 truncate max-w-[80%]">{config.qrcodeContent}</span>}
       </div>
     );
@@ -249,11 +260,11 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
     const secs = Math.floor((diff % 60000) / 1000);
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-3 rounded-lg" style={{ background: bg, color: fg }}>
-        {config.countdownTitle && <span className="text-lg font-bold opacity-80">{config.countdownTitle}</span>}
+        {config.countdownTitle && <span className={`${fs.title} font-bold opacity-80`}>{config.countdownTitle}</span>}
         <div className="flex gap-4">
           {[{ v: days, l: "天" }, { v: hours, l: "時" }, { v: mins, l: "分" }, { v: secs, l: "秒" }].map(({ v, l }) => (
             <div key={l} className="flex flex-col items-center">
-              <span className="text-4xl font-mono font-bold">{String(v).padStart(2, "0")}</span>
+              <span className={`${fs.countdown} font-mono font-bold`}>{String(v).padStart(2, "0")}</span>
               <span className="text-xs opacity-50">{l}</span>
             </div>
           ))}
@@ -280,9 +291,9 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
   if (config.widgetType === "weather") {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-lg" style={{ background: bg, color: fg }}>
-        <CloudSun className="w-16 h-16 opacity-60" />
-        <span className="text-lg font-bold">{config.city || "City"}</span>
-        <WeatherDisplay city={config.city || "Taipei"} fg={fg} />
+        <CloudSun className={`${fs.weatherIcon} opacity-60`} />
+        <span className={`${fs.weatherCity} font-bold`}>{config.city || "City"}</span>
+        <WeatherDisplay city={config.city || "Taipei"} fg={fg} fontSize={fs.weather} />
       </div>
     );
   }
@@ -295,7 +306,7 @@ function extractYoutubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-function WeatherDisplay({ city, fg }: { city: string; fg: string }) {
+function WeatherDisplay({ city, fg, fontSize }: { city: string; fg: string; fontSize?: string }) {
   const [weather, setWeather] = useState<{ temp: string; desc: string } | null>(null);
 
   useEffect(() => {
@@ -311,7 +322,7 @@ function WeatherDisplay({ city, fg }: { city: string; fg: string }) {
   if (!weather) return <span className="text-xs opacity-40">Loading...</span>;
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <span className="text-3xl font-bold">{weather.temp}</span>
+      <span className={`${fontSize || "text-3xl"} font-bold`}>{weather.temp}</span>
       <span className="text-sm opacity-60">{weather.desc}</span>
     </div>
   );
@@ -349,6 +360,8 @@ export default function MediaPage() {
     countdownTitle: "",
     youtubeUrl: "",
     city: "Taipei",
+    fontSize: "medium" as "small" | "medium" | "large" | "xlarge",
+    qrcodeSize: 140,
   };
   const [widgetForm, setWidgetForm] = useState(defaultWidgetForm);
 
@@ -450,11 +463,12 @@ export default function MediaPage() {
       widgetType: widgetForm.widgetType,
       bgColor: widgetForm.bgColor,
       textColor: widgetForm.textColor,
+      fontSize: widgetForm.fontSize,
     };
     if (widgetForm.widgetType === "webpage") config.url = widgetForm.url;
     if (widgetForm.widgetType === "marquee") { config.text = widgetForm.text; config.speed = widgetForm.speed; }
     if (widgetForm.widgetType === "clock") { config.format = widgetForm.format; config.clockStyle = widgetForm.clockStyle; config.timezone = widgetForm.timezone; config.showDate = widgetForm.showDate; }
-    if (widgetForm.widgetType === "qrcode") config.qrcodeContent = widgetForm.qrcodeContent;
+    if (widgetForm.widgetType === "qrcode") { config.qrcodeContent = widgetForm.qrcodeContent; config.qrcodeSize = widgetForm.qrcodeSize; }
     if (widgetForm.widgetType === "countdown") { config.targetDate = widgetForm.targetDate; config.countdownTitle = widgetForm.countdownTitle; }
     if (widgetForm.widgetType === "youtube") config.youtubeUrl = widgetForm.youtubeUrl;
     if (widgetForm.widgetType === "weather") config.city = widgetForm.city;
@@ -848,6 +862,37 @@ export default function MediaPage() {
               </div>
             </div>
 
+            {/* Font Size - shown for clock, date, marquee, countdown, weather */}
+            {["clock", "date", "marquee", "countdown", "weather"].includes(widgetForm.widgetType) && (
+              <div className="space-y-2">
+                <Label>{t("widgetFontSize")}</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(["small", "medium", "large", "xlarge"] as const).map((size) => {
+                    const sizeLabels = { small: t("widgetFontSizeSmall"), medium: t("widgetFontSizeMedium"), large: t("widgetFontSizeLarge"), xlarge: t("widgetFontSizeXLarge") };
+                    return (
+                      <button key={size} type="button" onClick={() => setWidgetForm({ ...widgetForm, fontSize: size })}
+                        className={`p-2 rounded-lg border-2 transition-all text-sm text-center ${widgetForm.fontSize === size ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:border-primary/40"}`}>
+                        {sizeLabels[size]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* QR Code Size */}
+            {widgetForm.widgetType === "qrcode" && (
+              <div className="space-y-2">
+                <Label>{t("widgetQrcodeSize")}：{widgetForm.qrcodeSize}px</Label>
+                <input type="range" min={60} max={300} step={10} value={widgetForm.qrcodeSize}
+                  onChange={(e) => setWidgetForm({ ...widgetForm, qrcodeSize: Number(e.target.value) })}
+                  className="w-full accent-primary" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>60px</span><span>300px</span>
+                </div>
+              </div>
+            )}
+
             {/* Live Preview */}
             <div className="space-y-2">
               <Label>{t("mediaPreviewUnavailable").replace("（範例素材）", "").replace("(sample)", "Preview")}</Label>
@@ -868,6 +913,8 @@ export default function MediaPage() {
                   countdownTitle: widgetForm.countdownTitle,
                   youtubeUrl: widgetForm.youtubeUrl,
                   city: widgetForm.city,
+                  fontSize: widgetForm.fontSize,
+                  qrcodeSize: widgetForm.qrcodeSize,
                 }} />
               </div>
             </div>
