@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { Monitor, Plus, Pencil, Trash2, Search, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,32 +21,40 @@ import {
 import { toast } from "sonner";
 
 interface Screen {
-  id: number; name: string; branch: string; location: string; resolution: string; online: boolean;
+  id: string;
+  name: string;
+  branch: string;
+  location: string;
+  resolution: string;
+  online: boolean;
 }
 
 const branches = ["台北信義店", "台中逢甲店", "高雄巨蛋店", "新竹竹北店", "台南永康店"];
-
-const initialScreens: Screen[] = [
-  { id: 1, name: "1F 入口大螢幕", branch: "台北信義店", location: "一樓入口右側", resolution: "1920×1080", online: true },
-  { id: 2, name: "B1 美食街看板", branch: "台北信義店", location: "地下一樓手扶梯旁", resolution: "1920×1080", online: true },
-  { id: 3, name: "門口大螢幕", branch: "台中逢甲店", location: "店門口正上方", resolution: "3840×2160", online: false },
-  { id: 4, name: "結帳區看板", branch: "高雄巨蛋店", location: "結帳櫃台後方", resolution: "1920×1080", online: true },
-  { id: 5, name: "大廳迎賓螢幕", branch: "新竹竹北店", location: "大廳入口", resolution: "1920×1080", online: true },
-  { id: 6, name: "門口直立看板", branch: "台南永康店", location: "門口左側", resolution: "1080×1920", online: false },
-];
-
 const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080" };
 
 export default function ScreensPage() {
   const { isAdmin } = useUserRole();
   const { t } = useLanguage();
-  const [screens, setScreens] = useState<Screen[]>(initialScreens);
+  const { user } = useAuth();
+  const [screens, setScreens] = useState<Screen[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const fetchScreens = async () => {
+    setLoading(true);
+    const { data, error } = await (supabase as any).from("screens").select("id, name, branch, location, resolution, online").order("created_at", { ascending: true });
+    if (error) { toast.error(error.message); }
+    else { setScreens(data || []); }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchScreens(); }, []);
 
   const filtered = screens.filter((s) => {
     const matchSearch = s.name.includes(search) || s.branch.includes(search) || s.location.includes(search);
@@ -59,22 +69,28 @@ export default function ScreensPage() {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.branch) { toast.error(t("screensFillRequired")); return; }
-    if (editingId !== null) {
-      setScreens((prev) => prev.map((s) => (s.id === editingId ? { ...s, ...form } : s)));
-      toast.success(t("screensUpdated"));
+    setSaving(true);
+    if (editingId) {
+      const { error } = await (supabase as any).from("screens").update({ name: form.name, branch: form.branch, location: form.location, resolution: form.resolution, updated_at: new Date().toISOString() }).eq("id", editingId);
+      if (error) toast.error(error.message);
+      else toast.success(t("screensUpdated"));
     } else {
-      setScreens((prev) => [...prev, { id: Date.now(), ...form, online: false }]);
-      toast.success(t("screensAdded"));
+      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: form.branch, location: form.location, resolution: form.resolution, created_by: user?.id });
+      if (error) toast.error(error.message);
+      else toast.success(t("screensAdded"));
     }
+    setSaving(false);
     setDialogOpen(false);
+    fetchScreens();
   };
 
-  const handleDelete = () => {
-    if (deleteId !== null) {
-      setScreens((prev) => prev.filter((s) => s.id !== deleteId));
-      toast.success(t("screensDeleted"));
+  const handleDelete = async () => {
+    if (deleteId) {
+      const { error } = await (supabase as any).from("screens").delete().eq("id", deleteId);
+      if (error) toast.error(error.message);
+      else { toast.success(t("screensDeleted")); fetchScreens(); }
       setDeleteId(null);
     }
   };
@@ -108,43 +124,47 @@ export default function ScreensPage() {
         </Select>
       </div>
 
-      <div className="grid gap-3">
-        {filtered.length === 0 && (
-          <Card className="p-12 text-center text-muted-foreground">
-            <Monitor className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p>{t("screensNoResult")}</p>
-          </Card>
-        )}
-        {filtered.map((screen, i) => (
-          <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
-              <Monitor className="w-6 h-6 text-muted-foreground/60" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-medium text-foreground truncate">{screen.name}</h3>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                  screen.online ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${screen.online ? "bg-success" : "bg-destructive"}`} />
-                  {screen.online ? t("online") : t("offline")}
-                </span>
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : (
+        <div className="grid gap-3">
+          {filtered.length === 0 && (
+            <Card className="p-12 text-center text-muted-foreground">
+              <Monitor className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p>{t("screensNoResult")}</p>
+            </Card>
+          )}
+          {filtered.map((screen, i) => (
+            <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                <Monitor className="w-6 h-6 text-muted-foreground/60" />
               </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{screen.branch}</span>
-                <span>{screen.location}</span>
-                <span>{screen.resolution}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-foreground truncate">{screen.name}</h3>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                    screen.online ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${screen.online ? "bg-success" : "bg-destructive"}`} />
+                    {screen.online ? t("online") : t("offline")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{screen.branch}</span>
+                  <span>{screen.location}</span>
+                  <span>{screen.resolution}</span>
+                </div>
               </div>
-            </div>
-            {isAdmin && (
-              <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}><Pencil className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}><Trash2 className="w-4 h-4" /></Button>
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+              {isAdmin && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}><Pencil className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -182,7 +202,10 @@ export default function ScreensPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t("cancel")}</Button></DialogClose>
-            <Button onClick={handleSave}>{editingId ? t("screensSaveChanges") : t("screensAdd")}</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingId ? t("screensSaveChanges") : t("screensAdd")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

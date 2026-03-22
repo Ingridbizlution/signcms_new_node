@@ -1,8 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  Image, Film, Upload, Trash2, Search, Grid3X3, List, Eye, FileImage, FileVideo, X, Clock, HardDrive,
+  Image, Upload, Trash2, Search, Grid3X3, List, Eye, FileImage, FileVideo, Clock, HardDrive, Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,29 +19,41 @@ import {
 import { toast } from "sonner";
 
 interface MediaItem {
-  id: number; name: string; type: "image" | "video"; url: string; thumbnail: string;
-  size: string; dimensions: string; uploadedAt: string; duration?: string;
+  id: string;
+  name: string;
+  type: "image" | "video";
+  url: string;
+  thumbnail: string;
+  size: string;
+  dimensions: string;
+  duration?: string;
+  created_at: string;
 }
-
-const initialMedia: MediaItem[] = [
-  { id: 1, name: "春季促銷橫幅.jpg", type: "image", url: "", thumbnail: "", size: "2.4 MB", dimensions: "1920×1080", uploadedAt: "2026-03-20" },
-  { id: 2, name: "新品上市動畫.mp4", type: "video", url: "", thumbnail: "", size: "18.6 MB", dimensions: "1920×1080", uploadedAt: "2026-03-19", duration: "0:30" },
-  { id: 3, name: "品牌Logo動態.mp4", type: "video", url: "", thumbnail: "", size: "5.2 MB", dimensions: "1920×1080", uploadedAt: "2026-03-18", duration: "0:10" },
-  { id: 4, name: "夏季活動海報.png", type: "image", url: "", thumbnail: "", size: "3.1 MB", dimensions: "1080×1920", uploadedAt: "2026-03-17" },
-  { id: 5, name: "會員日廣告.jpg", type: "image", url: "", thumbnail: "", size: "1.8 MB", dimensions: "3840×2160", uploadedAt: "2026-03-16" },
-  { id: 6, name: "美食推薦輪播.mp4", type: "video", url: "", thumbnail: "", size: "24.1 MB", dimensions: "1920×1080", uploadedAt: "2026-03-15", duration: "0:45" },
-];
 
 export default function MediaPage() {
   const { isAdmin } = useUserRole();
   const { t } = useLanguage();
-  const [media, setMedia] = useState<MediaItem[]>(initialMedia);
+  const { user } = useAuth();
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchMedia = async () => {
+    setLoading(true);
+    const { data, error } = await (supabase as any).from("media_items")
+      .select("id, name, type, url, thumbnail, size, dimensions, duration, created_at")
+      .order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
+    else setMedia(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchMedia(); }, []);
 
   const filtered = media.filter((m) => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase());
@@ -47,44 +61,77 @@ export default function MediaPage() {
     return matchSearch && matchType;
   });
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach((file) => {
+
+    for (const file of Array.from(files)) {
       const isVideo = file.type.startsWith("video/");
       const isImage = file.type.startsWith("image/");
-      if (!isVideo && !isImage) { toast.error(`${t("mediaUnsupported")}：${file.name}`); return; }
-      const newItem: MediaItem = {
-        id: Date.now() + Math.random(), name: file.name, type: isVideo ? "video" : "image",
-        url: URL.createObjectURL(file), thumbnail: isImage ? URL.createObjectURL(file) : "",
-        size: formatFileSize(file.size), dimensions: t("mediaReading"), uploadedAt: new Date().toISOString().split("T")[0],
-        duration: isVideo ? "--:--" : undefined,
-      };
+      if (!isVideo && !isImage) { toast.error(`${t("mediaUnsupported")}：${file.name}`); continue; }
+
+      // Get dimensions
+      let dimensions = "";
+      let duration: string | undefined;
+
       if (isImage) {
-        const img = new window.Image();
-        img.onload = () => { setMedia((prev) => prev.map((m) => m.id === newItem.id ? { ...m, dimensions: `${img.naturalWidth}×${img.naturalHeight}` } : m)); };
-        img.src = newItem.url;
-      } else if (isVideo) {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.onloadedmetadata = () => {
-          const mins = Math.floor(video.duration / 60);
-          const secs = Math.floor(video.duration % 60);
-          setMedia((prev) => prev.map((m) => m.id === newItem.id ? { ...m, dimensions: `${video.videoWidth}×${video.videoHeight}`, duration: `${mins}:${secs.toString().padStart(2, "0")}` } : m));
-        };
-        video.src = newItem.url;
+        dimensions = await new Promise<string>((resolve) => {
+          const img = new window.Image();
+          img.onload = () => resolve(`${img.naturalWidth}×${img.naturalHeight}`);
+          img.onerror = () => resolve("");
+          img.src = URL.createObjectURL(file);
+        });
+      } else {
+        const result = await new Promise<{ dimensions: string; duration: string }>((resolve) => {
+          const video = document.createElement("video");
+          video.preload = "metadata";
+          video.onloadedmetadata = () => {
+            const mins = Math.floor(video.duration / 60);
+            const secs = Math.floor(video.duration % 60);
+            resolve({
+              dimensions: `${video.videoWidth}×${video.videoHeight}`,
+              duration: `${mins}:${secs.toString().padStart(2, "0")}`,
+            });
+          };
+          video.onerror = () => resolve({ dimensions: "", duration: "" });
+          video.src = URL.createObjectURL(file);
+        });
+        dimensions = result.dimensions;
+        duration = result.duration;
       }
-      setMedia((prev) => [newItem, ...prev]);
-      toast.success(`${t("mediaUploaded")}：${file.name}`);
-    });
+
+      // Store file as base64 data URL for persistence (no storage bucket available)
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const { error } = await (supabase as any).from("media_items").insert({
+        name: file.name,
+        type: isVideo ? "video" : "image",
+        url: dataUrl,
+        thumbnail: isImage ? dataUrl : "",
+        size: formatFileSize(file.size),
+        dimensions,
+        duration,
+        uploaded_by: user?.id,
+      });
+
+      if (error) toast.error(error.message);
+      else toast.success(`${t("mediaUploaded")}：${file.name}`);
+    }
+
     if (fileInputRef.current) fileInputRef.current.value = "";
+    fetchMedia();
   };
 
-  const handleDelete = () => {
-    if (deleteId !== null) {
+  const handleDelete = async () => {
+    if (deleteId) {
       const item = media.find((m) => m.id === deleteId);
-      setMedia((prev) => prev.filter((m) => m.id !== deleteId));
-      toast.success(`${t("mediaDeleted")}：${item?.name}`);
+      const { error } = await (supabase as any).from("media_items").delete().eq("id", deleteId);
+      if (error) toast.error(error.message);
+      else { toast.success(`${t("mediaDeleted")}：${item?.name}`); fetchMedia(); }
       setDeleteId(null);
     }
   };
@@ -131,78 +178,84 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {filtered.length === 0 && (
-        <Card className="p-12 text-center text-muted-foreground">
-          <Image className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p>{t("mediaNoResult")}</p>
-        </Card>
-      )}
-
-      {viewMode === "grid" && filtered.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map((item, i) => (
-            <Card key={item.id} className={`overflow-hidden hover-lift shadow-sm group cursor-pointer opacity-0 animate-scale-in stagger-${Math.min(i + 1, 8)}`} onClick={() => setPreviewItem(item)}>
-              <div className="aspect-video bg-muted relative flex items-center justify-center">
-                {item.url && item.type === "image" ? (
-                  <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
-                ) : item.type === "image" ? (
-                  <FileImage className="w-10 h-10 text-muted-foreground/40" />
-                ) : (
-                  <FileVideo className="w-10 h-10 text-muted-foreground/40" />
-                )}
-                {item.type === "video" && item.duration && (
-                  <span className="absolute bottom-2 right-2 bg-foreground/80 text-background text-[10px] font-medium px-1.5 py-0.5 rounded">{item.duration}</span>
-                )}
-                <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5">
-                  {item.type === "image" ? t("image") : t("video")}
-                </Badge>
-                <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <Eye className="w-6 h-6 text-background drop-shadow-lg" />
-                </div>
-              </div>
-              <div className="p-3 space-y-1">
-                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <span>{item.size}</span><span>·</span><span>{item.dimensions}</span>
-                </div>
-              </div>
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : (
+        <>
+          {filtered.length === 0 && (
+            <Card className="p-12 text-center text-muted-foreground">
+              <Image className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p>{t("mediaNoResult")}</p>
             </Card>
-          ))}
-        </div>
-      )}
+          )}
 
-      {viewMode === "list" && filtered.length > 0 && (
-        <div className="grid gap-2">
-          {filtered.map((item) => (
-            <Card key={item.id} className="p-3 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setPreviewItem(item)}>
-              <div className="w-16 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden relative">
-                {item.url && item.type === "image" ? (
-                  <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
-                ) : item.type === "image" ? (
-                  <FileImage className="w-5 h-5 text-muted-foreground/50" />
-                ) : (
-                  <FileVideo className="w-5 h-5 text-muted-foreground/50" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{item.type === "image" ? t("image") : t("video")}</Badge>
-                  <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" />{item.size}</span>
-                  <span>{item.dimensions}</span>
-                  {item.duration && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{item.duration}</span>}
-                  <span>{item.uploadedAt}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}><Eye className="w-4 h-4" /></Button>
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="w-4 h-4" /></Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
+          {viewMode === "grid" && filtered.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filtered.map((item, i) => (
+                <Card key={item.id} className={`overflow-hidden hover-lift shadow-sm group cursor-pointer opacity-0 animate-scale-in stagger-${Math.min(i + 1, 8)}`} onClick={() => setPreviewItem(item)}>
+                  <div className="aspect-video bg-muted relative flex items-center justify-center">
+                    {item.url && item.type === "image" ? (
+                      <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                    ) : item.type === "image" ? (
+                      <FileImage className="w-10 h-10 text-muted-foreground/40" />
+                    ) : (
+                      <FileVideo className="w-10 h-10 text-muted-foreground/40" />
+                    )}
+                    {item.type === "video" && item.duration && (
+                      <span className="absolute bottom-2 right-2 bg-foreground/80 text-background text-[10px] font-medium px-1.5 py-0.5 rounded">{item.duration}</span>
+                    )}
+                    <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5">
+                      {item.type === "image" ? t("image") : t("video")}
+                    </Badge>
+                    <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <Eye className="w-6 h-6 text-background drop-shadow-lg" />
+                    </div>
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span>{item.size}</span><span>·</span><span>{item.dimensions}</span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {viewMode === "list" && filtered.length > 0 && (
+            <div className="grid gap-2">
+              {filtered.map((item) => (
+                <Card key={item.id} className="p-3 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setPreviewItem(item)}>
+                  <div className="w-16 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                    {item.url && item.type === "image" ? (
+                      <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                    ) : item.type === "image" ? (
+                      <FileImage className="w-5 h-5 text-muted-foreground/50" />
+                    ) : (
+                      <FileVideo className="w-5 h-5 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{item.type === "image" ? t("image") : t("video")}</Badge>
+                      <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" />{item.size}</span>
+                      <span>{item.dimensions}</span>
+                      {item.duration && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{item.duration}</span>}
+                      <span>{item.created_at?.split("T")[0]}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}><Eye className="w-4 h-4" /></Button>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="w-4 h-4" /></Button>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
@@ -241,15 +294,17 @@ export default function MediaPage() {
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-muted-foreground text-xs">{previewItem?.type === "video" ? t("mediaDuration") : t("mediaUploadDate")}</p>
-                <p className="font-medium text-foreground">{previewItem?.type === "video" ? previewItem?.duration : previewItem?.uploadedAt}</p>
+                <p className="font-medium text-foreground">{previewItem?.type === "video" ? previewItem?.duration : previewItem?.created_at?.split("T")[0]}</p>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button variant="destructive" size="sm" className="gap-2" onClick={() => { if (previewItem) { setDeleteId(previewItem.id); setPreviewItem(null); } }}>
-                <Trash2 className="w-4 h-4" />
-                {t("mediaDeleteItem")}
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex justify-end">
+                <Button variant="destructive" size="sm" className="gap-2" onClick={() => { if (previewItem) { setDeleteId(previewItem.id); setPreviewItem(null); } }}>
+                  <Trash2 className="w-4 h-4" />
+                  {t("mediaDeleteItem")}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
