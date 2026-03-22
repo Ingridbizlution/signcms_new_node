@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarClock, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown,
-  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers,
+  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers, Code2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
