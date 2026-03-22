@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -296,6 +296,80 @@ export default function ContentStudioPage() {
     setZones((prev) => prev.map((z) => (z.id === zoneId ? { ...z, content } : z)));
   }, []);
 
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [resizing, setResizing] = useState<{ zoneId: string; edge: "right" | "bottom"; startPos: number; startVal: number } | null>(null);
+
+  // Find adjacent zones that share an edge
+  const getAdjacentZones = useCallback((zone: Zone, edge: "right" | "bottom", allZones: Zone[]) => {
+    if (edge === "right") {
+      const rightEdge = zone.x + zone.w;
+      return allZones.filter((z) => z.id !== zone.id && Math.abs(z.x - rightEdge) < 1 && z.y < zone.y + zone.h && z.y + z.h > zone.y);
+    } else {
+      const bottomEdge = zone.y + zone.h;
+      return allZones.filter((z) => z.id !== zone.id && Math.abs(z.y - bottomEdge) < 1 && z.x < zone.x + zone.w && z.x + z.w > zone.x);
+    }
+  }, []);
+
+  const hasResizeHandle = useCallback((zone: Zone, edge: "right" | "bottom", allZones: Zone[]) => {
+    return getAdjacentZones(zone, edge, allZones).length > 0;
+  }, [getAdjacentZones]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent, zoneId: string, edge: "right" | "bottom") => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startPos = edge === "right" ? e.clientX : e.clientY;
+    const zone = zones.find((z) => z.id === zoneId);
+    if (!zone) return;
+    const startVal = edge === "right" ? zone.w : zone.h;
+    setResizing({ zoneId, edge, startPos, startVal });
+
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+    const canvasSize = edge === "right" ? canvasRect.width : canvasRect.height;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = edge === "right" ? ev.clientX - startPos : ev.clientY - startPos;
+      const deltaPercent = (delta / canvasSize) * 100;
+      const newVal = Math.max(10, Math.min(90, startVal + deltaPercent));
+      const diff = newVal - startVal;
+
+      setZones((prev) => {
+        const currentZone = prev.find((z) => z.id === zoneId)!;
+        const adjacent = getAdjacentZones(currentZone, edge, prev);
+        if (adjacent.length === 0) return prev;
+
+        return prev.map((z) => {
+          if (z.id === zoneId) {
+            return edge === "right"
+              ? { ...z, w: startVal + diff }
+              : { ...z, h: startVal + diff };
+          }
+          if (adjacent.some((a) => a.id === z.id)) {
+            if (edge === "right") {
+              const origX = currentZone.x + startVal;
+              const origW = z.x + z.w - origX;
+              return { ...z, x: currentZone.x + startVal + diff, w: Math.max(10, origW - diff) };
+            } else {
+              const origY = currentZone.y + startVal;
+              const origH = z.y + z.h - origY;
+              return { ...z, y: currentZone.y + startVal + diff, h: Math.max(10, origH - diff) };
+            }
+          }
+          return z;
+        });
+      });
+    };
+
+    const onUp = () => {
+      setResizing(null);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [zones, getAdjacentZones]);
+
   const activeZone = zones.find((z) => z.id === selectedZone);
 
   return (
@@ -383,7 +457,8 @@ export default function ContentStudioPage() {
         {/* Canvas area */}
         <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-xl border border-border relative overflow-hidden min-h-0">
           <div
-            className="relative bg-card rounded-lg shadow-lg border border-border overflow-hidden transition-all duration-300"
+            ref={canvasRef}
+            className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`}
             style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}
           >
             {zones.map((zone) => {
@@ -428,6 +503,24 @@ export default function ContentStudioPage() {
                   <span className="absolute top-1.5 left-1.5 bg-foreground/80 text-background text-[10px] font-bold px-1.5 py-0.5 rounded">
                     {zone.label}
                   </span>
+
+                  {/* Resize handles */}
+                  {hasResizeHandle(zone, "right", zones) && (
+                    <div
+                      className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-20 group/handle hover:bg-primary/30 transition-colors"
+                      onMouseDown={(e) => handleResizeStart(e, zone.id, "right")}
+                    >
+                      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-8 rounded-full bg-primary/60 opacity-0 group-hover/handle:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                  {hasResizeHandle(zone, "bottom", zones) && (
+                    <div
+                      className="absolute bottom-0 left-0 h-2 w-full cursor-row-resize z-20 group/handle hover:bg-primary/30 transition-colors"
+                      onMouseDown={(e) => handleResizeStart(e, zone.id, "bottom")}
+                    >
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-primary/60 opacity-0 group-hover/handle:opacity-100 transition-opacity" />
+                    </div>
+                  )}
                 </div>
               );
             })}
