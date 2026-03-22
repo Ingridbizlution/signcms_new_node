@@ -198,6 +198,10 @@ export default function SystemLogsPage() {
     noLogs: { zh: "暫無紀錄", en: "No logs found", ja: "ログなし" },
     totalLogs: { zh: "共 {count} 筆紀錄", en: "{count} logs", ja: "{count} 件のログ" },
     exportExcel: { zh: "匯出 Excel", en: "Export Excel", ja: "Excelエクスポート" },
+    allTime: { zh: "所有時間", en: "All Time", ja: "全期間" },
+    today: { zh: "今天", en: "Today", ja: "今日" },
+    thisWeek: { zh: "本週", en: "This Week", ja: "今週" },
+    thisMonth: { zh: "本月", en: "This Month", ja: "今月" },
   };
 
   const handleExportDeviceExcel = () => {
