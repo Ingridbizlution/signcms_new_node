@@ -63,7 +63,7 @@ function generateSimValue(type: string): number {
 }
 
 export default function IoTDashboardPage() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { user } = useAuth();
   const [devices, setDevices] = useState<IotDevice[]>([]);
   const [loading, setLoading] = useState(true);
