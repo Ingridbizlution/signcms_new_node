@@ -289,11 +289,16 @@ const AnnouncementPage = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
-          <Megaphone className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+            <Megaphone className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">{t("pageTitle")}</h1>
         </div>
-        <h1 className="text-2xl font-bold text-foreground">{t("pageTitle")}</h1>
+        <Button variant="outline" size="icon" onClick={() => setSettingsOpen(true)} className="h-10 w-10 rounded-xl">
+          <Settings className="h-5 w-5" />
+        </Button>
       </div>
 
       <Tabs defaultValue="edit" className="w-full">
