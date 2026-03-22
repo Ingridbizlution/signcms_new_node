@@ -260,11 +260,11 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
     const secs = Math.floor((diff % 60000) / 1000);
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-3 rounded-lg" style={{ background: bg, color: fg }}>
-        {config.countdownTitle && <span className="text-lg font-bold opacity-80">{config.countdownTitle}</span>}
+        {config.countdownTitle && <span className={`${fs.title} font-bold opacity-80`}>{config.countdownTitle}</span>}
         <div className="flex gap-4">
           {[{ v: days, l: "天" }, { v: hours, l: "時" }, { v: mins, l: "分" }, { v: secs, l: "秒" }].map(({ v, l }) => (
             <div key={l} className="flex flex-col items-center">
-              <span className="text-4xl font-mono font-bold">{String(v).padStart(2, "0")}</span>
+              <span className={`${fs.countdown} font-mono font-bold`}>{String(v).padStart(2, "0")}</span>
               <span className="text-xs opacity-50">{l}</span>
             </div>
           ))}
