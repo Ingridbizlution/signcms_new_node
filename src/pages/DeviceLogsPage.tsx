@@ -15,7 +15,7 @@ import {
   RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
   Trash2, Send, ShieldCheck, Image, Brush,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
 import * as XLSX from "xlsx";
 
 // --- Device log types ---
