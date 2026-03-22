@@ -119,7 +119,7 @@ const CustomerServicePage = () => {
                       <div
                         className={cn(
                           "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card",
-                          c.status === "active" ? "bg-green-500" : c.status === "waiting" ? "bg-amber-500" : "bg-gray-400"
+                          c.status === "active" ? "bg-success" : c.status === "waiting" ? "bg-warning" : "bg-muted-foreground/50"
                         )}
                       />
                     </div>

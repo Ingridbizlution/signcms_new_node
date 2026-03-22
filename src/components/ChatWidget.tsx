@@ -84,7 +84,7 @@ const ChatWidget = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-white/80 hover:text-white hover:bg-white/10"
+              className="h-7 w-7 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
               onClick={() => setOpen(false)}
             >
               <X className="h-4 w-4" />
