@@ -636,6 +636,8 @@ const translations = {
   tipOrderedList: { zh: "編號清單", en: "Ordered List", ja: "番号付きリスト" },
   tipInsertImage: { zh: "插入圖片", en: "Insert Image", ja: "画像を挿入" },
   tipUpdated: { zh: "更新", en: "Updated", ja: "更新" },
+  tipUploadFile: { zh: "上傳文件", en: "Upload file", ja: "ファイルをアップロード" },
+  tipView: { zh: "檢視", en: "View", ja: "表示" },
 } as const;
 
 type TranslationKey = keyof typeof translations;
