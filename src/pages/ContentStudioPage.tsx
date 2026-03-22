@@ -503,6 +503,24 @@ export default function ContentStudioPage() {
                   <span className="absolute top-1.5 left-1.5 bg-foreground/80 text-background text-[10px] font-bold px-1.5 py-0.5 rounded">
                     {zone.label}
                   </span>
+
+                  {/* Resize handles */}
+                  {hasResizeHandle(zone, "right", zones) && (
+                    <div
+                      className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-20 group/handle hover:bg-primary/30 transition-colors"
+                      onMouseDown={(e) => handleResizeStart(e, zone.id, "right")}
+                    >
+                      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-8 rounded-full bg-primary/60 opacity-0 group-hover/handle:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                  {hasResizeHandle(zone, "bottom", zones) && (
+                    <div
+                      className="absolute bottom-0 left-0 h-2 w-full cursor-row-resize z-20 group/handle hover:bg-primary/30 transition-colors"
+                      onMouseDown={(e) => handleResizeStart(e, zone.id, "bottom")}
+                    >
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-primary/60 opacity-0 group-hover/handle:opacity-100 transition-opacity" />
+                    </div>
+                  )}
                 </div>
               );
             })}
