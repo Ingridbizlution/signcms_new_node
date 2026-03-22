@@ -91,6 +91,15 @@ export default function ScreensPage() {
   const [mediaOptions, setMediaOptions] = useState<{ id: string; name: string; type: string }[]>([]);
   const [designOptions, setDesignOptions] = useState<{ id: string; name: string }[]>([]);
 
+  // IoT extension
+  const [iotScreen, setIotScreen] = useState<Screen | null>(null);
+  const [iotDevices, setIotDevices] = useState<{ id: string; name: string; type: string; status: string }[]>([
+    { id: "1", name: "空氣品質偵測器 AQ-01", type: "air_quality", status: "online" },
+    { id: "2", name: "地震發報器 EQ-03", type: "earthquake", status: "offline" },
+  ]);
+  const [addIotOpen, setAddIotOpen] = useState(false);
+  const [newIotDevice, setNewIotDevice] = useState({ name: "", type: "air_quality" });
+
   // Fetch media & design projects for default playback selector
   useEffect(() => {
     if (!settingsScreen) return;
