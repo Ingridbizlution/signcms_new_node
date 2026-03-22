@@ -405,7 +405,7 @@ export default function ContentStudioPage() {
                 >
                   {/* Content render */}
                   {zone.content?.type === "text" && zone.content.value ? (
-                    <div className="p-3 text-center w-full" style={{ color: zone.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(zone.content.fontSize || 24, 52) }}>
+                    <div className="p-3 w-full" style={{ color: zone.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(zone.content.fontSize || 24, 52), textAlign: zone.content.textAlign || "center" }}>
                       <span className="font-bold leading-tight whitespace-pre-line">{zone.content.value}</span>
                     </div>
                   ) : zone.content?.type === "image" ? (
