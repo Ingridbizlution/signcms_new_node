@@ -169,14 +169,20 @@ export default function SystemLogsPage() {
 
   // --- Activity filters ---
   const filteredActivity = useMemo(() => {
+    let timeStart: Date | null = null;
+    if (activityFilterTime === "today") timeStart = startOfDay(new Date());
+    else if (activityFilterTime === "week") timeStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    else if (activityFilterTime === "month") timeStart = startOfMonth(new Date());
+
     return activityLogs.filter(l => {
       if (activityFilterCategory !== "all" && l.category !== activityFilterCategory) return false;
       if (activityFilterOrg === "none" && l.org_id) return false;
       if (activityFilterOrg !== "all" && activityFilterOrg !== "none" && l.org_id !== activityFilterOrg) return false;
+      if (timeStart && !isAfter(new Date(l.created_at), timeStart)) return false;
       if (activitySearch && !l.action.includes(activitySearch) && !l.target_name.includes(activitySearch) && !l.detail.includes(activitySearch) && !(l.user_name || "").includes(activitySearch)) return false;
       return true;
     });
-  }, [activityLogs, activityFilterCategory, activityFilterOrg, activitySearch]);
+  }, [activityLogs, activityFilterCategory, activityFilterOrg, activityFilterTime, activitySearch]);
 
   const labels = {
     title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
