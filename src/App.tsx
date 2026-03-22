@@ -20,10 +20,13 @@ import AppStore from "./pages/AppStore.tsx";
 import Announcement from "./pages/Announcement.tsx";
 import Queue from "./pages/Queue.tsx";
 import MeetingRoom from "./pages/MeetingRoom.tsx";
+import CustomerServicePage from "./pages/CustomerServicePage.tsx";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import ChatWidget from "./components/ChatWidget.tsx";
 
 const queryClient = new QueryClient();
 
@@ -53,9 +56,12 @@ const App = () => (
                   <Route path="/announcement" element={<ProtectedRoute><Announcement /></ProtectedRoute>} />
                   <Route path="/queue" element={<ProtectedRoute><Queue /></ProtectedRoute>} />
                   <Route path="/meeting-room" element={<ProtectedRoute><MeetingRoom /></ProtectedRoute>} />
+                  <Route path="/customer-service" element={<ProtectedRoute><CustomerServicePage /></ProtectedRoute>} />
+                  <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <ChatWidget />
               </InstalledAppsProvider>
             </AuthProvider>
           </BrowserRouter>

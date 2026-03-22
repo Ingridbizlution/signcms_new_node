@@ -1,4 +1,4 @@
-import { LayoutDashboard, Monitor, Image, CalendarClock, ShieldCheck, Brush, Send, FileText, Store, Megaphone, Users, CloudSun, Instagram, DoorOpen, Languages, Clock } from "lucide-react";
+import { LayoutDashboard, Monitor, Image, CalendarClock, ShieldCheck, Brush, Send, FileText, Store, Megaphone, Users, CloudSun, Instagram, DoorOpen, Languages, Clock, HeadphonesIcon, BookOpen } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -78,6 +78,43 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator className="mx-3 my-1" />
+
+        {/* Customer Service section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs text-muted-foreground uppercase tracking-wider px-3">
+            {!collapsed && (language === "zh" ? "客戶服務" : language === "ja" ? "カスタマーサービス" : "Customer Service")}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to="/customer-service"
+                    className="hover:bg-sidebar-accent/60 rounded-lg transition-all duration-200"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  >
+                    <HeadphonesIcon className="mr-3 h-[18px] w-[18px]" />
+                    {!collapsed && <span>{language === "zh" ? "客服中心" : language === "ja" ? "サポートセンター" : "Support Center"}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to="/knowledge-base"
+                    className="hover:bg-sidebar-accent/60 rounded-lg transition-all duration-200"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  >
+                    <BookOpen className="mr-3 h-[18px] w-[18px]" />
+                    {!collapsed && <span>{language === "zh" ? "知識庫管理" : language === "ja" ? "ナレッジ管理" : "Knowledge Base"}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
