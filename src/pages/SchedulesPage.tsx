@@ -284,7 +284,7 @@ export default function SchedulesPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">播放清單排程</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -305,13 +305,14 @@ export default function SchedulesPage() {
       )}
 
       <div className="grid gap-4">
-        {schedules.map((schedule) => (
-          <Card
+        {schedules.map((schedule, i) => (
+          <div
             key={schedule.id}
-            className={`shadow-sm hover:shadow-md transition-shadow ${
-              !schedule.enabled ? "opacity-60" : ""
+            className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${
+              !schedule.enabled ? "[&>*]:opacity-60" : ""
             }`}
           >
+          <Card className="hover-lift shadow-sm">
             <div className="p-4 flex items-start gap-4">
               <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-0.5">
                 <CalendarClock className="w-5 h-5 text-muted-foreground/60" />
@@ -430,6 +431,7 @@ export default function SchedulesPage() {
               </div>
             )}
           </Card>
+          </div>
         ))}
       </div>
 

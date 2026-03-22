@@ -7,9 +7,10 @@ interface StatCardProps {
   icon: React.ReactNode;
   subtitle?: string;
   variant?: "default" | "success" | "warning";
+  className?: string;
 }
 
-function StatCard({ title, value, icon, subtitle, variant = "default" }: StatCardProps) {
+function StatCard({ title, value, icon, subtitle, variant = "default", className = "" }: StatCardProps) {
   const variantClasses = {
     default: "bg-card",
     success: "bg-card border-success/20",
@@ -17,7 +18,7 @@ function StatCard({ title, value, icon, subtitle, variant = "default" }: StatCar
   };
 
   return (
-    <Card className={`p-5 ${variantClasses[variant]} shadow-sm hover:shadow-md transition-shadow`}>
+    <Card className={`p-5 ${variantClasses[variant]} hover-lift shadow-sm ${className}`}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -41,12 +42,12 @@ const mockScreens = [
   { id: 6, name: "台南永康店 - 門口", branch: "台南永康店", online: false, lastSeen: "32 分鐘前" },
 ];
 
-const ScreenCard = ({ screen }: { screen: typeof mockScreens[0] }) => {
+const ScreenCard = ({ screen, index }: { screen: typeof mockScreens[0]; index: number }) => {
   return (
-    <Card className="overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer">
-      <div className="aspect-video bg-muted relative flex items-center justify-center">
-        <Monitor className="w-10 h-10 text-muted-foreground/40" />
-        <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+    <Card className={`overflow-hidden hover-lift shadow-sm group cursor-pointer opacity-0 animate-slide-up stagger-${index + 1}`}>
+      <div className="aspect-video bg-muted relative flex items-center justify-center overflow-hidden">
+        <Monitor className="w-10 h-10 text-muted-foreground/40 transition-transform duration-300 group-hover:scale-110" />
+        <div className={`absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-transform duration-200 group-hover:scale-105 ${
           screen.online
             ? "bg-success/10 text-success"
             : "bg-destructive/10 text-destructive"
@@ -56,7 +57,7 @@ const ScreenCard = ({ screen }: { screen: typeof mockScreens[0] }) => {
         </div>
       </div>
       <div className="p-4 space-y-1">
-        <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+        <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors duration-200">
           {screen.name}
         </h3>
         <p className="text-xs text-muted-foreground">{screen.branch} · {screen.lastSeen}</p>
@@ -71,7 +72,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
+      <div className="animate-fade-in">
         <h1 className="text-2xl font-bold text-foreground">總覽儀表板</h1>
         <p className="text-sm text-muted-foreground mt-1">即時監控所有分店電子看板狀態</p>
       </div>
@@ -83,6 +84,7 @@ export default function DashboardPage() {
           icon={<Monitor className="w-5 h-5 text-success" />}
           subtitle="運行正常"
           variant="success"
+          className="opacity-0 animate-count-up stagger-1"
         />
         <StatCard
           title="離線螢幕警告"
@@ -90,20 +92,22 @@ export default function DashboardPage() {
           icon={<WifiOff className="w-5 h-5 text-destructive" />}
           subtitle="需要檢查"
           variant="warning"
+          className="opacity-0 animate-count-up stagger-2"
         />
         <StatCard
           title="今日預計播放"
           value="1,280"
           icon={<PlayCircle className="w-5 h-5 text-primary" />}
           subtitle="次廣告輪播"
+          className="opacity-0 animate-count-up stagger-3"
         />
       </div>
 
-      <div>
+      <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
         <h2 className="text-lg font-semibold text-foreground mb-4">分店螢幕列表</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockScreens.map((screen) => (
-            <ScreenCard key={screen.id} screen={screen} />
+          {mockScreens.map((screen, i) => (
+            <ScreenCard key={screen.id} screen={screen} index={i} />
           ))}
         </div>
       </div>

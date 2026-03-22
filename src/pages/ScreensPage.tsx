@@ -112,7 +112,7 @@ export default function ScreensPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">螢幕管理</h1>
           <p className="text-sm text-muted-foreground mt-1">管理所有分店的電子看板設備</p>
@@ -155,8 +155,8 @@ export default function ScreensPage() {
             <p>沒有找到符合條件的螢幕</p>
           </Card>
         )}
-        {filtered.map((screen) => (
-          <Card key={screen.id} className="p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+        {filtered.map((screen, i) => (
+          <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
             <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
               <Monitor className="w-6 h-6 text-muted-foreground/60" />
             </div>

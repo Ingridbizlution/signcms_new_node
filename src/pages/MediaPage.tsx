@@ -217,7 +217,7 @@ export default function MediaPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">廣告素材庫</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -292,10 +292,10 @@ export default function MediaPage() {
       {/* Grid View */}
       {viewMode === "grid" && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map((item) => (
+          {filtered.map((item, i) => (
             <Card
               key={item.id}
-              className="overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer"
+              className={`overflow-hidden hover-lift shadow-sm group cursor-pointer opacity-0 animate-scale-in stagger-${Math.min(i + 1, 8)}`}
               onClick={() => setPreviewItem(item)}
             >
               <div className="aspect-video bg-muted relative flex items-center justify-center">
