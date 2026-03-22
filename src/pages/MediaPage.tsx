@@ -488,6 +488,15 @@ export default function MediaPage() {
     fetchMedia();
   };
 
+  const handleChangeProject = async (itemId: string, newProjectId: string | null) => {
+    const { error } = await (supabase as any).from("media_items").update({ design_project_id: newProjectId }).eq("id", itemId);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(t("save"));
+      fetchMedia();
+    }
+  };
+
   const handleDelete = async () => {
     if (deleteId) {
       const item = media.find((m) => m.id === deleteId);
