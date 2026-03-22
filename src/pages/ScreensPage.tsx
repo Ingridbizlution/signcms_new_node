@@ -155,8 +155,8 @@ export default function ScreensPage() {
             <p>沒有找到符合條件的螢幕</p>
           </Card>
         )}
-        {filtered.map((screen) => (
-          <Card key={screen.id} className="p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+        {filtered.map((screen, i) => (
+          <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
             <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
               <Monitor className="w-6 h-6 text-muted-foreground/60" />
             </div>
