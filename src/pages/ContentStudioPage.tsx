@@ -699,8 +699,50 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [zones, getAdjacentZones]);
 
-  const activeZone = zones.find((z) => z.id === selectedZone);
+  // Overlay drag logic
+  const handleOverlayDragStart = useCallback((e: React.MouseEvent, overlayId: string) => {
+    e.stopPropagation(); e.preventDefault();
+    const overlay = overlays.find((o) => o.id === overlayId);
+    if (!overlay) return;
+    const startX = e.clientX, startY = e.clientY;
+    const origX = overlay.x, origY = overlay.y;
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
 
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const newX = Math.max(0, Math.min(canvasRect.width - overlay.w, origX + dx));
+      const newY = Math.max(0, Math.min(canvasRect.height - overlay.h, origY + dy));
+      setOverlays((prev) => prev.map((o) => o.id === overlayId ? { ...o, x: newX, y: newY } : o));
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  }, [overlays]);
+
+  // Overlay resize logic
+  const handleOverlayResizeStart = useCallback((e: React.MouseEvent, overlayId: string, corner: string) => {
+    e.stopPropagation(); e.preventDefault();
+    const overlay = overlays.find((o) => o.id === overlayId);
+    if (!overlay) return;
+    const startX = e.clientX, startY = e.clientY;
+    const origW = overlay.w, origH = overlay.h;
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const newW = Math.max(60, Math.min(canvasRect.width - overlay.x, origW + dx));
+      const newH = Math.max(40, Math.min(canvasRect.height - overlay.y, origH + dy));
+      setOverlays((prev) => prev.map((o) => o.id === overlayId ? { ...o, w: newW, h: newH } : o));
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  }, [overlays]);
+
+  const activeZone = zones.find((z) => z.id === selectedZone);
+  const activeOverlay = overlays.find((o) => o.id === selectedOverlay);
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header */}
