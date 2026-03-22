@@ -50,6 +50,7 @@ interface ActivityLog {
   target_name: string;
   detail: string;
   created_at: string;
+  ip_address: string;
   user_name?: string;
 }
 
