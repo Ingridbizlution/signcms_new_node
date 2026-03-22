@@ -233,6 +233,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   const [showContentPicker, setShowContentPicker] = useState(false);
   const [selectedPickerIds, setSelectedPickerIds] = useState<Set<string>>(new Set());
   const [pickerSearch, setPickerSearch] = useState("");
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [pickerFilter, setPickerFilter] = useState<"all" | "image" | "video" | "widget">("all");
   const [pickerSort, setPickerSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
 
