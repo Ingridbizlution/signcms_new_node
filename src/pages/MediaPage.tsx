@@ -795,7 +795,9 @@ const MediaPage = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="aspect-video overflow-hidden rounded-lg bg-muted flex items-center justify-center">
-              {previewItem?.type === "image" && previewItem.url ? (
+              {previewItem?.type === "widget" ? (
+                (() => { const c = parseWidgetConfig(previewItem.url); return c ? <WidgetPreviewCard config={c} /> : <Code2 className="w-16 h-16 opacity-30" />; })()
+              ) : previewItem?.type === "image" && previewItem.url ? (
                 <img src={previewItem.url} alt={previewItem.name} className="h-full w-full object-contain" />
               ) : previewItem?.type === "video" && previewItem.url ? (
                 <video src={previewItem.url} controls className="h-full w-full" />
