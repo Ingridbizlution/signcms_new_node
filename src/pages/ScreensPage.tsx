@@ -806,7 +806,9 @@ export default function ScreensPage() {
                     <Plus className="w-3.5 h-3.5" /> 新增裝置
                   </Button>
                 </div>
-                {iotDevices.length === 0 ? (
+                {iotLoading ? (
+                  <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                ) : iotDevices.length === 0 ? (
                   <div className="text-center py-6 text-muted-foreground border border-dashed border-border rounded-lg">
                     <Radio className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">尚未連接任何 IoT 裝置</p>
