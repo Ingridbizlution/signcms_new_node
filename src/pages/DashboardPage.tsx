@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Monitor, WifiOff, PlayCircle, Loader2, Image, FileVideo, CalendarClock, BarChart3 } from "lucide-react";
+import { Monitor, WifiOff, PlayCircle, Loader2, Image, FileVideo, CalendarClock, BarChart3, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface StatCardProps {
