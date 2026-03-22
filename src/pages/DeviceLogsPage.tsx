@@ -18,6 +18,9 @@ import {
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter, subDays } from "date-fns";
 import * as XLSX from "xlsx";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 // --- Device log types ---
 interface DeviceLog {
