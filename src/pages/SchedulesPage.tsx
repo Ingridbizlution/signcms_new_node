@@ -62,14 +62,16 @@ interface FormPlaylistItem {
   duration: number;
 }
 
-function ItemIcon({ subType }: { subType: "image" | "video" | "design" }) {
+function ItemIcon({ subType }: { subType: "image" | "video" | "design" | "widget" }) {
   if (subType === "design") return <Layers className="w-4 h-4 text-primary shrink-0" />;
+  if (subType === "widget") return <Code2 className="w-4 h-4 text-accent-foreground shrink-0" />;
   if (subType === "video") return <FileVideo className="w-4 h-4 text-muted-foreground shrink-0" />;
   return <FileImage className="w-4 h-4 text-muted-foreground shrink-0" />;
 }
 
-function SmallItemIcon({ subType }: { subType: "image" | "video" | "design" }) {
+function SmallItemIcon({ subType }: { subType: "image" | "video" | "design" | "widget" }) {
   if (subType === "design") return <Layers className="w-3.5 h-3.5 text-primary shrink-0" />;
+  if (subType === "widget") return <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />;
   if (subType === "video") return <FileVideo className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
   return <FileImage className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
 }
