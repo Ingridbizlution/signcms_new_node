@@ -13,6 +13,7 @@ import Screens from "./pages/Screens.tsx";
 import Media from "./pages/Media.tsx";
 import Schedules from "./pages/Schedules.tsx";
 import Publishing from "./pages/Publishing.tsx";
+import DeviceLogs from "./pages/DeviceLogs.tsx";
 import ContentStudio from "./pages/ContentStudio.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
