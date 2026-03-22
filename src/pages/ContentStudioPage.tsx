@@ -199,16 +199,18 @@ function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; t
 }
 
 // ── Zone Editor ────────────────────────────────────────────────────
-function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
+function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets }: {
   zone: Zone;
   onUpdate: (content: ZoneContent) => void;
   onClose: () => void;
   dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[];
+  dbWidgets: { id: string; name: string; url: string }[];
 }) {
   const { t } = useLanguage();
   const content: ZoneContent = zone.content || { type: "color", value: "", bgColor: "hsl(var(--muted))" };
   const mediaItems = content.mediaItems || [];
   const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [showWidgetPicker, setShowWidgetPicker] = useState(false);
 
   const addMedia = (m: typeof dbMedia[0]) => {
     const dur = m.type === "video" && m.duration ? parseFloat(m.duration) || 10 : 5;
