@@ -301,6 +301,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
     onUpdate(updatedContent);
     setSelectedPickerIds(new Set());
     setShowContentPicker(false);
+    setPickerSearch("");
+    setPickerFilter("all");
   };
 
   const addMedia = (m: typeof dbMedia[0]) => {
