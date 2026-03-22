@@ -588,7 +588,7 @@ export default function MediaPage() {
             <Select value={uploadProjectId} onValueChange={setUploadProjectId}>
               <SelectTrigger className="w-[150px] h-9"><FolderOpen className="w-4 h-4 mr-1 text-muted-foreground shrink-0" /><SelectValue placeholder={t("mediaNoProject")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">{t("mediaNoProject")}</SelectItem>
+                <SelectItem value="__none__">{t("mediaNoProject")}</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
