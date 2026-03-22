@@ -114,8 +114,8 @@ const AppStorePage = () => {
       setQueueDialogOpen(true);
       return;
     }
-    setInstalledApps((prev) => new Set(prev).add(app.id));
-    toast.success(`${app.name[language]} ${t("successInstall")}`);
+    installApp(app.id);
+    toast.success(`${app.name[language]} ${tt("successInstall")}`);
     if (app.hasConfig) {
       setQueueDialogOpen(true);
     }
