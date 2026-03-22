@@ -305,6 +305,55 @@ export default function ScreensPage() {
             {groups.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" title="網路速度閾值設定">
+              <SlidersHorizontal className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72" align="end">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
+                <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={uploadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(v, downloadThreshold);
+                    }}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">下載速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={downloadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(uploadThreshold, v);
+                    }}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                <span className="w-2 h-2 rounded-full bg-success" /> 正常
+                <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Group chips */}
