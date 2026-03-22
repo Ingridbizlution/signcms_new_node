@@ -209,14 +209,15 @@ export default function SystemLogsPage() {
   };
 
   const handleExportActivityExcel = () => {
-    const headers = { zh: ["時間", "使用者", "分類", "操作", "目標", "詳細"], en: ["Time", "User", "Category", "Action", "Target", "Detail"], ja: ["時間", "ユーザー", "カテゴリ", "操作", "対象", "詳細"] }[language];
+    const headers = { zh: ["時間", "操作人員", "操作內容", "分類", "目標", "詳細", "IP 地址"], en: ["Time", "Operator", "Action", "Category", "Target", "Detail", "IP Address"], ja: ["時間", "操作者", "操作内容", "カテゴリ", "対象", "詳細", "IPアドレス"] }[language];
     const rows = filteredActivity.map(l => [
       format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
-      l.user_name || "", (ACTIVITY_CATEGORY_CONFIG[l.category]?.label[language]) || l.category,
-      l.action, l.target_name || l.target_type, l.detail,
+      l.user_name || "", l.action,
+      (ACTIVITY_CATEGORY_CONFIG[l.category]?.label[language]) || l.category,
+      l.target_name || l.target_type, l.detail, l.ip_address || "-",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 36 }];
+    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 20 }, { wch: 36 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, labels.tabActivity[language]);
     XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyyMMdd-HHmm")}.xlsx`);
