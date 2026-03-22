@@ -130,10 +130,10 @@ const RichTextEditor = ({ content, onChange, placeholder, minHeight = "160px" }:
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-border bg-muted/30">
         {/* Undo / Redo */}
-        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title="Undo">
+        <ToolbarButton onClick={() => editor.chain().focus().undo().run()} title={t("tipUndo")}>
           <Undo2 className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title="Redo">
+        <ToolbarButton onClick={() => editor.chain().focus().redo().run()} title={t("tipRedo")}>
           <Redo2 className="h-4 w-4" />
         </ToolbarButton>
 
