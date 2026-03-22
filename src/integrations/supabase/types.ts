@@ -195,6 +195,58 @@ export type Database = {
         }
         Relationships: []
       }
+      playback_logs: {
+        Row: {
+          duration_seconds: number
+          id: string
+          media_id: string | null
+          media_name: string
+          org_id: string | null
+          played_at: string
+          screen_id: string | null
+        }
+        Insert: {
+          duration_seconds?: number
+          id?: string
+          media_id?: string | null
+          media_name?: string
+          org_id?: string | null
+          played_at?: string
+          screen_id?: string | null
+        }
+        Update: {
+          duration_seconds?: number
+          id?: string
+          media_id?: string | null
+          media_name?: string
+          org_id?: string | null
+          played_at?: string
+          screen_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playback_logs_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playback_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playback_logs_screen_id_fkey"
+            columns: ["screen_id"]
+            isOneToOne: false
+            referencedRelation: "screens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
