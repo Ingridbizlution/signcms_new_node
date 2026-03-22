@@ -76,7 +76,7 @@ const ChatWidget = () => {
               {isAI ? <Bot className="h-5 w-5 text-primary-foreground" /> : <User className="h-5 w-5 text-primary-foreground" />}
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-sm font-semibold text-primary-foreground">
                 {isAI ? "AI 智慧助手" : "真人客服"}
               </h4>
               <p className="text-xs text-primary-foreground/70">隨時為您服務</p>
