@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +51,33 @@ interface ActivityLog {
   target_name: string;
   detail: string;
   created_at: string;
+  ip_address: string;
   user_name?: string;
+}
+
+// Action type determines row color: create=green, update=blue, delete=red, auth=sky, publish=emerald, admin=amber
+const ACTION_COLOR_MAP: Record<string, { bg: string; text: string; dot: string }> = {
+  create: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-green-700 dark:text-green-400", dot: "bg-green-500" },
+  update: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-blue-700 dark:text-blue-400", dot: "bg-blue-500" },
+  delete: { bg: "bg-red-50 dark:bg-red-950/20", text: "text-red-700 dark:text-red-400", dot: "bg-red-500" },
+  login: { bg: "bg-sky-50 dark:bg-sky-950/20", text: "text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
+  logout: { bg: "bg-slate-50 dark:bg-slate-950/20", text: "text-slate-700 dark:text-slate-400", dot: "bg-slate-400" },
+  publish: { bg: "bg-emerald-50 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-400", dot: "bg-emerald-500" },
+  admin: { bg: "bg-amber-50 dark:bg-amber-950/20", text: "text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
+};
+
+function getActionColor(action: string, category: string) {
+  const lower = action.toLowerCase();
+  if (lower.includes("刪除") || lower.includes("delete") || lower.includes("移除")) return ACTION_COLOR_MAP.delete;
+  if (lower.includes("新增") || lower.includes("create") || lower.includes("建立") || lower.includes("上傳")) return ACTION_COLOR_MAP.create;
+  if (lower.includes("修改") || lower.includes("update") || lower.includes("編輯") || lower.includes("變更")) return ACTION_COLOR_MAP.update;
+  if (lower.includes("發佈") || lower.includes("publish")) return ACTION_COLOR_MAP.publish;
+  if (lower.includes("登出") || lower.includes("logout")) return ACTION_COLOR_MAP.logout;
+  if (lower.includes("登入") || lower.includes("login")) return ACTION_COLOR_MAP.login;
+  if (category === "admin") return ACTION_COLOR_MAP.admin;
+  if (category === "publish") return ACTION_COLOR_MAP.publish;
+  if (category === "auth") return ACTION_COLOR_MAP.login;
+  return ACTION_COLOR_MAP.update;
 }
 
 const ACTIVITY_CATEGORY_CONFIG: Record<string, { icon: typeof User; color: string; label: { zh: string; en: string; ja: string } }> = {
@@ -182,14 +209,15 @@ export default function SystemLogsPage() {
   };
 
   const handleExportActivityExcel = () => {
-    const headers = { zh: ["時間", "使用者", "分類", "操作", "目標", "詳細"], en: ["Time", "User", "Category", "Action", "Target", "Detail"], ja: ["時間", "ユーザー", "カテゴリ", "操作", "対象", "詳細"] }[language];
+    const headers = { zh: ["時間", "操作人員", "操作內容", "分類", "目標", "詳細", "IP 地址"], en: ["Time", "Operator", "Action", "Category", "Target", "Detail", "IP Address"], ja: ["時間", "操作者", "操作内容", "カテゴリ", "対象", "詳細", "IPアドレス"] }[language];
     const rows = filteredActivity.map(l => [
       format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
-      l.user_name || "", (ACTIVITY_CATEGORY_CONFIG[l.category]?.label[language]) || l.category,
-      l.action, l.target_name || l.target_type, l.detail,
+      l.user_name || "", l.action,
+      (ACTIVITY_CATEGORY_CONFIG[l.category]?.label[language]) || l.category,
+      l.target_name || l.target_type, l.detail, l.ip_address || "-",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 36 }];
+    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 12 }, { wch: 20 }, { wch: 36 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, labels.tabActivity[language]);
     XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyyMMdd-HHmm")}.xlsx`);
@@ -329,29 +357,49 @@ export default function SystemLogsPage() {
           ) : filteredActivity.length === 0 ? (
             <Card className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{labels.noLogs[language]}</p></Card>
           ) : (
-            <div className="space-y-2">
-              {filteredActivity.map((log, i) => {
-                const cfg = ACTIVITY_CATEGORY_CONFIG[log.category] || ACTIVITY_CATEGORY_CONFIG.auth;
-                const Icon = cfg.icon;
-                return (
-                  <Card key={log.id} className={`p-3 flex items-start gap-3 shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-                    <div className={`mt-0.5 p-1.5 rounded-lg ${cfg.color}`}><Icon className="w-4 h-4" /></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-foreground">{log.action}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{cfg.label[language]}</Badge>
-                      </div>
-                      {log.target_name && <p className="text-xs text-muted-foreground mt-0.5">{log.target_name}</p>}
-                      {log.detail && <p className="text-xs text-muted-foreground mt-0.5">{log.detail}</p>}
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
-                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{log.user_name}</span>
-                        <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+            <Card className="overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[160px]">{{ zh: "操作人員", en: "Operator", ja: "操作者" }[language]}</TableHead>
+                    <TableHead>{{ zh: "操作內容", en: "Action", ja: "操作内容" }[language]}</TableHead>
+                    <TableHead className="w-[120px]">{{ zh: "操作時間", en: "Time", ja: "時間" }[language]}</TableHead>
+                    <TableHead className="w-[130px]">{{ zh: "IP 地址", en: "IP Address", ja: "IPアドレス" }[language]}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredActivity.map((log) => {
+                    const colors = getActionColor(log.action, log.category);
+                    return (
+                      <TableRow key={log.id} className={`${colors.bg} border-b border-border/50 transition-colors`}>
+                        <TableCell className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium text-foreground">{log.user_name || "-"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${colors.dot}`} />
+                            <div className="min-w-0">
+                              <span className={`text-sm font-medium ${colors.text}`}>{log.action}</span>
+                              {log.target_name && <span className="text-xs text-muted-foreground ml-2">— {log.target_name}</span>}
+                              {log.detail && <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-md">{log.detail}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(log.created_at), "MM-dd HH:mm:ss")}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-xs text-muted-foreground font-mono">
+                          {log.ip_address || "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
