@@ -291,9 +291,9 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
   if (config.widgetType === "weather") {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-lg" style={{ background: bg, color: fg }}>
-        <CloudSun className="w-16 h-16 opacity-60" />
-        <span className="text-lg font-bold">{config.city || "City"}</span>
-        <WeatherDisplay city={config.city || "Taipei"} fg={fg} />
+        <CloudSun className={`${fs.weatherIcon} opacity-60`} />
+        <span className={`${fs.weatherCity} font-bold`}>{config.city || "City"}</span>
+        <WeatherDisplay city={config.city || "Taipei"} fg={fg} fontSize={fs.weather} />
       </div>
     );
   }
