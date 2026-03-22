@@ -93,12 +93,24 @@ export default function ScreensPage() {
 
   // IoT extension
   const [iotScreen, setIotScreen] = useState<Screen | null>(null);
-  const [iotDevices, setIotDevices] = useState<{ id: string; name: string; type: string; status: string }[]>([
-    { id: "1", name: "空氣品質偵測器 AQ-01", type: "air_quality", status: "online" },
-    { id: "2", name: "地震發報器 EQ-03", type: "earthquake", status: "offline" },
-  ]);
+  const [iotDevices, setIotDevices] = useState<{ id: string; name: string; device_type: string; status: string }[]>([]);
+  const [iotLoading, setIotLoading] = useState(false);
   const [addIotOpen, setAddIotOpen] = useState(false);
   const [newIotDevice, setNewIotDevice] = useState({ name: "", type: "air_quality" });
+  const [iotSaving, setIotSaving] = useState(false);
+
+  // Fetch IoT devices when a screen is selected
+  useEffect(() => {
+    if (!iotScreen) return;
+    const fetchIotDevices = async () => {
+      setIotLoading(true);
+      const { data, error } = await (supabase as any).from("iot_devices").select("*").eq("screen_id", iotScreen.id).order("created_at", { ascending: true });
+      if (error) toast.error(error.message);
+      else setIotDevices(data || []);
+      setIotLoading(false);
+    };
+    fetchIotDevices();
+  }, [iotScreen]);
 
   // Fetch media & design projects for default playback selector
   useEffect(() => {
