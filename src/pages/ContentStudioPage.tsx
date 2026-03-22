@@ -18,7 +18,7 @@ import {
   Utensils, PartyPopper, ShoppingBag, Sun, Gift, Coffee,
   X, Plus, AlignLeft, AlignCenter, AlignRight, Minus,
   Save, FolderOpen, FilePlus, ChevronLeft, ChevronRightIcon, Play, Pause,
-  Layers, Code2, Clock, Calendar, Globe, CloudSun, QrCode, Timer, Youtube
+  Layers, Code2, Clock, Calendar, Globe, CloudSun, QrCode, Timer, Youtube, Move, Maximize2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QRCodeSVG } from "qrcode.react";
@@ -58,11 +58,22 @@ interface Zone {
   content?: ZoneContent;
 }
 
+interface OverlayBlock {
+  id: string;
+  x: number; // px position relative to canvas
+  y: number;
+  w: number; // px size
+  h: number;
+  label: string;
+  content?: ZoneContent;
+}
+
 interface DesignProject {
   id: string;
   name: string;
   aspect: AspectRatio;
   zones: Zone[];
+  overlays?: OverlayBlock[];
   created_at: string;
   updated_at: string;
 }
@@ -541,7 +552,9 @@ export default function ContentStudioPage() {
   const { user } = useAuth();
   const [aspect, setAspect] = useState<AspectRatio>("16:9");
   const [zones, setZones] = useState<Zone[]>(LAYOUT_PRESETS[0].zones.map((z) => ({ ...z })));
+  const [overlays, setOverlays] = useState<OverlayBlock[]>([]);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [selectedOverlay, setSelectedOverlay] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<string>("layouts");
 
   // Project state
@@ -578,32 +591,51 @@ export default function ContentStudioPage() {
   const applyLayout = useCallback((preset: LayoutPreset) => { setZones(preset.zones.map((z) => ({ ...z }))); setSelectedZone(null); }, []);
   const applyTemplate = useCallback((tpl: TemplateItem) => { setAspect(tpl.aspect); setZones(tpl.zones.map((z) => ({ ...z }))); setSelectedZone(null); }, []);
   const updateZoneContent = useCallback((zoneId: string, content: ZoneContent) => { setZones((prev) => prev.map((z) => (z.id === zoneId ? { ...z, content } : z))); }, []);
+  const updateOverlayContent = useCallback((overlayId: string, content: ZoneContent) => { setOverlays((prev) => prev.map((o) => (o.id === overlayId ? { ...o, content } : o))); }, []);
+
+  // Overlay management
+  const addOverlay = useCallback(() => {
+    const id = `overlay-${Date.now()}`;
+    const label = String.fromCharCode(65 + overlays.length); // A, B, C...
+    setOverlays((prev) => [...prev, { id, x: 50, y: 50, w: 200, h: 120, label: `OV-${label}`, content: { type: "text", value: "", bgColor: "hsla(0, 0%, 0%, 0.7)", fontSize: 20, textColor: "hsl(0 0% 100%)" } }]);
+  }, [overlays.length]);
+
+  const deleteOverlay = useCallback((id: string) => {
+    setOverlays((prev) => prev.filter((o) => o.id !== id));
+    if (selectedOverlay === id) setSelectedOverlay(null);
+  }, [selectedOverlay]);
 
   // Save project
   const handleSave = useCallback(async (name?: string) => {
     setSaving(true);
-    const projectData = { name: name || currentProject?.name || "Untitled", aspect, zones, created_by: user?.id, updated_at: new Date().toISOString() };
+    const zonesData = JSON.parse(JSON.stringify([...zones.map(z => ({ ...z })), ...overlays.map(o => ({ ...o, _overlay: true }))]));
+    const projectData = { name: name || currentProject?.name || "Untitled", aspect, zones: zonesData, created_by: user?.id, updated_at: new Date().toISOString() };
     try {
       if (currentProject) {
-        await (supabase as any).from("design_projects").update({ name: projectData.name, aspect, zones, updated_at: projectData.updated_at }).eq("id", currentProject.id);
-        setCurrentProject({ ...currentProject, ...projectData });
+        await (supabase as any).from("design_projects").update({ name: projectData.name, aspect, zones: zonesData, updated_at: projectData.updated_at }).eq("id", currentProject.id);
+        setCurrentProject({ ...currentProject, ...projectData, zones: zones, overlays });
         toast.success(t("studioProjectSaved"));
       } else {
         const { data } = await (supabase as any).from("design_projects").insert(projectData).select().single();
-        if (data) { setCurrentProject(data); toast.success(t("studioProjectSaved")); }
+        if (data) { setCurrentProject({ ...data, zones, overlays }); toast.success(t("studioProjectSaved")); }
       }
       loadProjects();
     } catch { toast.error(t("studioProjectSaveFailed")); }
     setSaving(false);
     setShowSaveDialog(false);
-  }, [currentProject, aspect, zones, user, t, loadProjects]);
+  }, [currentProject, aspect, zones, overlays, user, t, loadProjects]);
 
   // Load project
   const handleLoad = useCallback((project: DesignProject) => {
     setCurrentProject(project);
     setAspect(project.aspect as AspectRatio);
-    setZones(project.zones);
+    const allData = project.zones || [];
+    const regularZones = allData.filter((z: any) => !(z as any)._overlay);
+    const overlayData = allData.filter((z: any) => (z as any)._overlay).map((o: any) => { const { _overlay, ...rest } = o; return rest as OverlayBlock; });
+    setZones(regularZones);
+    setOverlays(overlayData);
     setSelectedZone(null);
+    setSelectedOverlay(null);
     setShowLoadDialog(false);
     toast.success(t("studioProjectLoaded"));
   }, [t]);
@@ -620,8 +652,10 @@ export default function ContentStudioPage() {
   const handleNew = useCallback(() => {
     setCurrentProject(null);
     setZones(LAYOUT_PRESETS[0].zones.map((z) => ({ ...z })));
+    setOverlays([]);
     setAspect("16:9");
     setSelectedZone(null);
+    setSelectedOverlay(null);
   }, []);
 
   // Resize logic
@@ -665,8 +699,50 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [zones, getAdjacentZones]);
 
-  const activeZone = zones.find((z) => z.id === selectedZone);
+  // Overlay drag logic
+  const handleOverlayDragStart = useCallback((e: React.MouseEvent, overlayId: string) => {
+    e.stopPropagation(); e.preventDefault();
+    const overlay = overlays.find((o) => o.id === overlayId);
+    if (!overlay) return;
+    const startX = e.clientX, startY = e.clientY;
+    const origX = overlay.x, origY = overlay.y;
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
 
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const newX = Math.max(0, Math.min(canvasRect.width - overlay.w, origX + dx));
+      const newY = Math.max(0, Math.min(canvasRect.height - overlay.h, origY + dy));
+      setOverlays((prev) => prev.map((o) => o.id === overlayId ? { ...o, x: newX, y: newY } : o));
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  }, [overlays]);
+
+  // Overlay resize logic
+  const handleOverlayResizeStart = useCallback((e: React.MouseEvent, overlayId: string, corner: string) => {
+    e.stopPropagation(); e.preventDefault();
+    const overlay = overlays.find((o) => o.id === overlayId);
+    if (!overlay) return;
+    const startX = e.clientX, startY = e.clientY;
+    const origW = overlay.w, origH = overlay.h;
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const newW = Math.max(60, Math.min(canvasRect.width - overlay.x, origW + dx));
+      const newH = Math.max(40, Math.min(canvasRect.height - overlay.y, origH + dy));
+      setOverlays((prev) => prev.map((o) => o.id === overlayId ? { ...o, w: newW, h: newH } : o));
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
+  }, [overlays]);
+
+  const activeZone = zones.find((z) => z.id === selectedZone);
+  const activeOverlay = overlays.find((o) => o.id === selectedOverlay);
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header */}
@@ -697,6 +773,10 @@ export default function ContentStudioPage() {
               <Smartphone className="w-3.5 h-3.5" /> 9:16
             </Button>
           </div>
+          <div className="w-px h-6 bg-border mx-1" />
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={addOverlay}>
+            <Layers className="w-3.5 h-3.5" /> {t("studioAddOverlay")}
+          </Button>
         </div>
       </div>
 
@@ -766,7 +846,8 @@ export default function ContentStudioPage() {
 
         {/* Canvas area */}
         <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-xl border border-border relative overflow-hidden min-h-0">
-          <div ref={canvasRef} className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`} style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}>
+          <div ref={canvasRef} className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`} style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}
+            onClick={() => { if (selectedOverlay) setSelectedOverlay(null); }}>
             {zones.map((zone) => {
               const isSelected = selectedZone === zone.id;
               const bg = zone.content?.bgColor || "hsl(var(--muted))";
@@ -775,7 +856,7 @@ export default function ContentStudioPage() {
                 <div key={zone.id}
                   className={`absolute cursor-pointer transition-all duration-200 flex items-center justify-center overflow-hidden ${isSelected ? "ring-2 ring-primary ring-offset-1 z-10" : "hover:ring-1 hover:ring-primary/40"}`}
                   style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%`, background: bg }}
-                  onClick={() => setSelectedZone(isSelected ? null : zone.id)}
+                  onClick={() => { setSelectedOverlay(null); setSelectedZone(isSelected ? null : zone.id); }}
                 >
                   {/* Content render */}
                   {zone.content?.type === "widget" && zone.content.widgetConfig ? (
@@ -811,8 +892,62 @@ export default function ContentStudioPage() {
               );
             })}
 
+            {/* Overlay blocks */}
+            {overlays.map((overlay) => {
+              const isSelected = selectedOverlay === overlay.id;
+              const bg = overlay.content?.bgColor || "hsla(0, 0%, 0%, 0.7)";
+              const mediaItems = overlay.content?.mediaItems || [];
+              return (
+                <div key={overlay.id}
+                  className={`absolute cursor-move flex items-center justify-center overflow-hidden rounded-lg ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1 z-40" : "z-30 hover:ring-1 hover:ring-accent-foreground/50"}`}
+                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
+                  onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
+                >
+                  {/* Content render */}
+                  {overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
+                    <ZoneAnimatedWrapper animation={overlay.content.widgetConfig.animation}>
+                      <WidgetZonePreview config={overlay.content.widgetConfig} />
+                    </ZoneAnimatedWrapper>
+                  ) : overlay.content?.type === "media" && mediaItems.length > 0 ? (
+                    <CarouselPreview items={mediaItems} transition={overlay.content.carouselTransition || "fade"} />
+                  ) : overlay.content?.type === "text" && overlay.content.value ? (
+                    <div className="p-2 w-full" style={{ color: overlay.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(overlay.content.fontSize || 20, 40), textAlign: overlay.content.textAlign || "center" }}>
+                      <span className="font-bold leading-tight whitespace-pre-line">{overlay.content.value}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-white/60">
+                      <Move className="w-5 h-5" />
+                      <span className="text-[10px] font-medium">{overlay.label}</span>
+                    </div>
+                  )}
+
+                  {/* Label badge */}
+                  <span className="absolute top-1 left-1 bg-accent-foreground/80 text-background text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <Layers className="w-2.5 h-2.5" /> {overlay.label}
+                  </span>
+
+                  {/* Delete button */}
+                  {isSelected && (
+                    <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-5 w-5 z-50" onClick={(e) => { e.stopPropagation(); deleteOverlay(overlay.id); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
+
+                  {/* Resize handle bottom-right */}
+                  <div data-resize="true" className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end"
+                    onMouseDown={(e) => handleOverlayResizeStart(e, overlay.id, "se")}>
+                    <Maximize2 className="w-3 h-3 text-white/60 rotate-90" />
+                  </div>
+                </div>
+              );
+            })}
+
             {activeZone && (
               <ZoneEditor zone={activeZone} onUpdate={(content) => updateZoneContent(activeZone.id, content)} onClose={() => setSelectedZone(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
+            )}
+            {activeOverlay && (
+              <ZoneEditor zone={{ id: activeOverlay.id, x: 0, y: 0, w: 100, h: 100, label: activeOverlay.label, content: activeOverlay.content }} onUpdate={(content) => updateOverlayContent(activeOverlay.id, content)} onClose={() => setSelectedOverlay(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
             )}
           </div>
         </div>

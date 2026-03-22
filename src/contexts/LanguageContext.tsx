@@ -351,6 +351,11 @@ const translations = {
   studioProjectSaveFailed: { zh: "儲存失敗", en: "Save failed", ja: "保存に失敗しました" },
   studioProjectLoaded: { zh: "專案已載入", en: "Project loaded", ja: "プロジェクトを読み込みました" },
   studioProjectDeleted: { zh: "專案已刪除", en: "Project deleted", ja: "プロジェクトを削除しました" },
+  studioOverlays: { zh: "重疊區塊", en: "Overlays", ja: "オーバーレイ" },
+  studioAddOverlay: { zh: "新增重疊區塊", en: "Add Overlay", ja: "オーバーレイ追加" },
+  studioEditOverlay: { zh: "編輯重疊區塊", en: "Edit Overlay", ja: "オーバーレイ編集" },
+  studioDeleteOverlay: { zh: "刪除重疊區塊", en: "Delete Overlay", ja: "オーバーレイ削除" },
+  studioOverlayHint: { zh: "可自由拖曳移動與調整大小", en: "Drag to move, resize from edges", ja: "ドラッグで移動、端からリサイズ" },
 } as const;
 
 type TranslationKey = keyof typeof translations;
