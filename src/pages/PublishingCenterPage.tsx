@@ -128,6 +128,9 @@ export default function PublishingCenterPage() {
   const allScreenIds = useMemo(() => new Set(screens.map((s) => s.id)), [screens]);
   const allSelected = selectedScreenIds.size === screens.length && screens.length > 0;
 
+  // Check if there are active emergency records
+  const hasActiveEmergency = useMemo(() => records.some((r) => r.status === "emergency"), [records]);
+
   const toggleScreen = (id: string) => {
     setSelectedScreenIds((prev) => {
       const next = new Set(prev);
