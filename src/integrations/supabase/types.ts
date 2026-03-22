@@ -105,6 +105,56 @@ export type Database = {
           },
         ]
       }
+      knowledge_items: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          file_count: number
+          id: string
+          org_id: string | null
+          sub_category: string
+          synced: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          description?: string
+          file_count?: number
+          id?: string
+          org_id?: string | null
+          sub_category?: string
+          synced?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          file_count?: number
+          id?: string
+          org_id?: string | null
+          sub_category?: string
+          synced?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_items: {
         Row: {
           created_at: string
