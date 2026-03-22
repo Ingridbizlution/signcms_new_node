@@ -280,11 +280,11 @@ export default function ScreensPage() {
         </div>
         {isAdmin && (
           <div className="flex gap-2 self-start">
-            <Button variant="outline" onClick={() => setNewGroupDialogOpen(true)} className="gap-2">
+            <Button variant="outline" onClick={() => setNewGroupDialogOpen(true)} className="gap-2" title="新增螢幕群組">
               <FolderPlus className="w-4 h-4" />
               {t("screensNewGroup")}
             </Button>
-            <Button onClick={openAdd} className="gap-2">
+            <Button onClick={openAdd} className="gap-2" title="新增螢幕">
               <Plus className="w-4 h-4" />
               {t("screensAdd")}
             </Button>
@@ -428,7 +428,7 @@ export default function ScreensPage() {
           )}
           {filtered.map((screen, i) => (
             <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0" title="螢幕">
                 <Monitor className="w-6 h-6 text-muted-foreground/60" />
               </div>
               <div className="flex-1 min-w-0">
@@ -442,15 +442,15 @@ export default function ScreensPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`}>
+                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`} title="群組">
                     <Layers className="w-3 h-3" />{screen.branch || t("screensUngrouped")}
                   </span>
-                  {screen.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{screen.location}</span>}
-                  <span>{screen.resolution}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]">SN: {screen.serial_number || "—"}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]">IP: {screen.ip_address || "—"}</span>
+                  {screen.location && <span className="flex items-center gap-1" title="位置"><MapPin className="w-3 h-3" />{screen.location}</span>}
+                  <span title="解析度">{screen.resolution}</span>
+                  <span className="flex items-center gap-1 font-mono text-[11px]" title="序號">SN: {screen.serial_number || "—"}</span>
+                  <span className="flex items-center gap-1 font-mono text-[11px]" title="網路 IP 位址">IP: {screen.ip_address || "—"}</span>
                   {screen.connection_type && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" title="連線方式">
                       {screen.connection_type === "wired" ? <Cable className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
                       {screen.connection_type === "wired" ? "有線" : "無線"}
                     </span>
@@ -469,7 +469,7 @@ export default function ScreensPage() {
                     const isWarning = hasData && (isUpLow || isDownLow);
 
                     return (
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
+                      <span title={`網路速度健康狀態（閾值：上傳 ${uploadThreshold} Mbps / 下載 ${downloadThreshold} Mbps）`} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
                         !hasData
                           ? "bg-muted text-muted-foreground"
                           : isWarning
@@ -500,8 +500,8 @@ export default function ScreensPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(t("screenLiveViewPlaceholder"))} title={t("screenLiveView")}><Eye className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIotScreen(screen)} title="IoT 擴充裝置"><Radio className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSettingsScreen(screen)} title={t("screenSettings")}><Settings className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}><Pencil className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}><Trash2 className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)} title="編輯螢幕"><Pencil className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)} title="刪除螢幕"><Trash2 className="w-4 h-4" /></Button>
                 </div>
               )}
             </Card>
