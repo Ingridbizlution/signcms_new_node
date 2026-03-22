@@ -964,7 +964,7 @@ const MediaPage = () => {
                 placeholder={t("mediaProjectNamePlaceholder")}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
               />
-              <Button onClick={handleCreateProject} disabled={!newProjectName.trim()} size="icon" className="shrink-0">
+              <Button onClick={handleCreateProject} disabled={!newProjectName.trim()} size="icon" className="shrink-0" title={t("mediaProjectCreated")}>
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
