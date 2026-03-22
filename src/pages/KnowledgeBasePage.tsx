@@ -260,6 +260,21 @@ const KnowledgeBasePage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* File management dialog */}
+      <Dialog open={!!fileItem} onOpenChange={(open) => { if (!open) { setFileItem(null); refetch(); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>檔案管理</DialogTitle>
+          </DialogHeader>
+          {fileItem && (
+            <KnowledgeFilePanel
+              knowledgeItemId={fileItem.id}
+              itemTitle={fileItem.title}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
