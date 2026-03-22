@@ -508,6 +508,7 @@ const AnnouncementPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-base">{t("colSubject")}</TableHead>
+                    <TableHead className="text-base">{t("colCategory")}</TableHead>
                     <TableHead className="text-base">{t("colDept")}</TableHead>
                     <TableHead className="text-base">{t("colPeriod")}</TableHead>
                     <TableHead className="text-base">{t("colStatus")}</TableHead>
@@ -515,11 +516,15 @@ const AnnouncementPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {announcements.map((a) => {
+                  {sortedAnnouncements.map((a) => {
                     const status = getStatus(a);
                     return (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-semibold text-base max-w-[240px] truncate">{a.subject}</TableCell>
+                      <TableRow key={a.id} className={a.pinned ? "bg-amber-500/5" : ""}>
+                        <TableCell className="font-semibold text-base max-w-[240px] truncate">
+                          {a.pinned && <Badge variant="outline" className="mr-2 border-amber-500 text-amber-600 text-[10px]">{t("pinnedTag")}</Badge>}
+                          {a.subject}
+                        </TableCell>
+                        <TableCell className="text-base">{categoryLabel(a.category)}</TableCell>
                         <TableCell className="text-base">{deptLabel(a.department)}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {format(a.startDate, "yyyy/MM/dd")} – {format(a.endDate, "yyyy/MM/dd")}
