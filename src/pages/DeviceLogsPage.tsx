@@ -141,7 +141,7 @@ export default function SystemLogsPage() {
 
   const fetchActivityLogs = async (pMap: Map<string, string>) => {
     setActivityLoading(true);
-    const { data } = await (supabase as any).from("activity_logs").select("*").order("created_at", { ascending: false }).limit(200);
+    const { data } = await (supabase as any).from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000);
     setActivityLogs((data || []).map((l: any) => ({
       ...l,
       user_name: pMap.get(l.user_id) || "Unknown",
