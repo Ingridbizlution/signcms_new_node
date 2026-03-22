@@ -228,14 +228,17 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   const mediaItems = content.mediaItems || [];
   const [showContentPicker, setShowContentPicker] = useState(false);
   const [selectedPickerIds, setSelectedPickerIds] = useState<Set<string>>(new Set());
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerFilter, setPickerFilter] = useState<"all" | "image" | "video" | "widget">("all");
+  const [pickerSort, setPickerSort] = useState<"name-asc" | "name-desc" | "newest" | "oldest">("name-asc");
 
   const pickerItems = useMemo(() => {
-    const items: { id: string; kind: "media" | "widget"; name: string; type?: string; icon: React.ReactNode; raw: any }[] = [];
+    const items: { id: string; kind: "media" | "widget"; name: string; type?: string; icon: React.ReactNode; raw: any; createdAt?: string }[] = [];
     dbMedia.forEach((m) => {
       items.push({
         id: `media-${m.id}`, kind: "media", name: m.name, type: m.type,
         icon: m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-primary shrink-0" /> : <Film className="w-3.5 h-3.5 text-primary shrink-0" />,
-        raw: m,
+        raw: m, createdAt: m.created_at,
       });
     });
     dbWidgets.forEach((w) => {
@@ -245,11 +248,29 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
       items.push({
         id: `widget-${w.id}`, kind: "widget", name: w.name,
         icon: <WidgetIcon className="w-3.5 h-3.5 text-accent-foreground shrink-0" />,
-        raw: { ...w, config },
+        raw: { ...w, config }, createdAt: w.created_at,
       });
     });
     return items;
   }, [dbMedia, dbWidgets]);
+
+  const filteredPickerItems = useMemo(() => {
+    let filtered = pickerItems;
+    if (pickerFilter === "image") filtered = filtered.filter((i) => i.kind === "media" && i.type === "image");
+    else if (pickerFilter === "video") filtered = filtered.filter((i) => i.kind === "media" && i.type === "video");
+    else if (pickerFilter === "widget") filtered = filtered.filter((i) => i.kind === "widget");
+    if (pickerSearch.trim()) {
+      const q = pickerSearch.trim().toLowerCase();
+      filtered = filtered.filter((i) => i.name.toLowerCase().includes(q));
+    }
+    filtered = [...filtered].sort((a, b) => {
+      if (pickerSort === "name-asc") return a.name.localeCompare(b.name);
+      if (pickerSort === "name-desc") return b.name.localeCompare(a.name);
+      if (pickerSort === "newest") return (b.createdAt || "").localeCompare(a.createdAt || "");
+      return (a.createdAt || "").localeCompare(b.createdAt || "");
+    });
+    return filtered;
+  }, [pickerItems, pickerFilter, pickerSearch, pickerSort]);
 
   const togglePickerItem = (id: string) => {
     setSelectedPickerIds((prev) => {
