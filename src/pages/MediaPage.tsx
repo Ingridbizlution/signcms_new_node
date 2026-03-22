@@ -511,7 +511,7 @@ export default function MediaPage() {
   const getTypeBadge = (item: MediaItem) => {
     if (item.type === "widget") {
       const config = parseWidgetConfig(item.url);
-      const subLabel = config ? { date: t("widgetDate"), clock: t("widgetClock"), webpage: t("widgetWebpage"), marquee: t("widgetMarquee") }[config.widgetType] : t("widget");
+      const subLabel = config ? { date: t("widgetDate"), clock: t("widgetClock"), webpage: t("widgetWebpage"), marquee: t("widgetMarquee"), qrcode: t("widgetQrcode"), countdown: t("widgetCountdown"), youtube: t("widgetYoutube"), weather: t("widgetWeather") }[config.widgetType] : t("widget");
       return subLabel;
     }
     return item.type === "image" ? t("image") : t("video");
