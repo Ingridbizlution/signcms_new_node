@@ -220,8 +220,8 @@ const CustomerServicePage = () => {
 
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4 max-w-3xl mx-auto">
-                    {MOCK_MESSAGES.map((msg) => {
+                  <div className="space-y-4 max-w-3xl mx-auto" ref={scrollRef}>
+                    {currentMessages.map((msg) => {
                       const isCustomer = msg.sender === "customer";
                       const isAI = msg.sender === "ai";
                       return (
