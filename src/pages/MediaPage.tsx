@@ -475,6 +475,7 @@ export default function MediaPage() {
         dimensions,
         duration,
         uploaded_by: user?.id,
+        design_project_id: uploadProjectId || null,
       });
 
       if (error) toast.error(error.message);
