@@ -878,7 +878,7 @@ const MediaPage = () => {
             )}
             {isAdmin && previewItem && (
               <div className="flex justify-end">
-                <Button variant="destructive" size="sm" className="gap-2" onClick={() => { setDeleteId(previewItem.id); setPreviewItem(null); }}>
+                <Button variant="destructive" size="sm" className="gap-2" onClick={() => { requestDelete(previewItem.id); setPreviewItem(null); }}>
                   <Trash2 className="w-4 h-4" />
                   {t("mediaDeleteItem")}
                 </Button>
