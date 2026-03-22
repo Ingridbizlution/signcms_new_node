@@ -32,6 +32,8 @@ interface MediaItem {
   duration?: number; // seconds for carousel auto-advance
 }
 
+type CarouselTransition = "fade" | "slide" | "zoom" | "none";
+
 interface ZoneContent {
   type: "text" | "media" | "color";
   value: string;
@@ -41,6 +43,7 @@ interface ZoneContent {
   textAlign?: "left" | "center" | "right";
   mediaItems?: MediaItem[];
   carouselInterval?: number; // seconds
+  carouselTransition?: CarouselTransition;
 }
 
 interface Zone {
