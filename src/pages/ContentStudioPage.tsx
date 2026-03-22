@@ -1024,12 +1024,12 @@ export default function ContentStudioPage() {
                   onClick={() => { setSelectedOverlay(null); setSelectedZone(isSelected ? null : zone.id); }}
                 >
                   {/* Content render */}
-                  {zone.content?.type === "widget" && zone.content.widgetConfig ? (
+                  {zone.content?.type === "media" && mediaItems.length > 0 ? (
+                    <CarouselPreview items={mediaItems} transition={zone.content.carouselTransition || "fade"} />
+                  ) : zone.content?.type === "widget" && zone.content.widgetConfig ? (
                     <ZoneAnimatedWrapper animation={zone.content.widgetConfig.animation}>
                       <WidgetZonePreview config={zone.content.widgetConfig} />
                     </ZoneAnimatedWrapper>
-                  ) : zone.content?.type === "media" && mediaItems.length > 0 ? (
-                    <CarouselPreview items={mediaItems} transition={zone.content.carouselTransition || "fade"} />
                   ) : zone.content?.type === "text" && zone.content.value ? (
                     <div className="p-3 w-full" style={{ color: zone.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(zone.content.fontSize || 24, 52), textAlign: zone.content.textAlign || "center" }}>
                       <span className="font-bold leading-tight whitespace-pre-line">{zone.content.value}</span>
