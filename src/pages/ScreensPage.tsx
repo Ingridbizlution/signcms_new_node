@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush } from "lucide-react";
+import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush, FileText } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -25,6 +25,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScreenLogPanel } from "@/components/ScreenLogPanel";
 
 const UNGROUPED = "__ungrouped__";
 
@@ -540,6 +542,12 @@ export default function ScreensPage() {
               {t("screenSettings")} — {settingsScreen?.name}
             </DialogTitle>
           </DialogHeader>
+          <Tabs defaultValue="settings">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="settings" className="gap-1.5"><Settings className="w-3.5 h-3.5" />{t("screenSettings")}</TabsTrigger>
+              <TabsTrigger value="logs" className="gap-1.5"><FileText className="w-3.5 h-3.5" />{t("navDeviceLogs")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="settings">
           <div className="space-y-5 py-2">
             {/* Network Settings */}
             <div className="space-y-3">
@@ -723,6 +731,11 @@ export default function ScreensPage() {
               {t("save")}
             </Button>
           </DialogFooter>
+            </TabsContent>
+            <TabsContent value="logs">
+              {settingsScreen && <ScreenLogPanel screenId={settingsScreen.id} />}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

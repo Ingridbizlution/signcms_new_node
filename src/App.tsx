@@ -13,6 +13,7 @@ import Screens from "./pages/Screens.tsx";
 import Media from "./pages/Media.tsx";
 import Schedules from "./pages/Schedules.tsx";
 import Publishing from "./pages/Publishing.tsx";
+import DeviceLogs from "./pages/DeviceLogs.tsx";
 import ContentStudio from "./pages/ContentStudio.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
                 <Route path="/studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
                 <Route path="/publishing" element={<ProtectedRoute><Publishing /></ProtectedRoute>} />
+                <Route path="/device-logs" element={<ProtectedRoute><DeviceLogs /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Monitor, Image, CalendarClock, ShieldCheck, Brush, Send } from "lucide-react";
+import { LayoutDashboard, Monitor, Image, CalendarClock, ShieldCheck, Brush, Send, FileText } from "lucide-react";
 import logoImg from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -29,6 +29,7 @@ export function AppSidebar() {
     { titleKey: "navStudio" as const, url: "/studio", icon: Brush, adminOnly: false },
     { titleKey: "navSchedules" as const, url: "/schedules", icon: CalendarClock, adminOnly: false },
     { titleKey: "navPublishing" as const, url: "/publishing", icon: Send, adminOnly: false },
+    { titleKey: "navDeviceLogs" as const, url: "/device-logs", icon: FileText, adminOnly: false },
     { titleKey: "navAdmin" as const, url: "/admin", icon: ShieldCheck, adminOnly: true },
   ];
 
