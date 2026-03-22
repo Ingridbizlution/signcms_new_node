@@ -484,7 +484,7 @@ export default function ScreensPage() {
                         }`} />
                         <ArrowUpDown className="w-3 h-3" />
                         {!hasData ? (
-                          <span>未設定</span>
+                          <span>{t("tipSpeedNotSet")}</span>
                         ) : (
                           <>
                             {up !== null && <span className={isUpLow ? "font-bold" : ""}>↑{screen.avg_upload_speed}</span>}
