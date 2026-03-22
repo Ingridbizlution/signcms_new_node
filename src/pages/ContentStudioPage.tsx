@@ -207,7 +207,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   const addMedia = (m: typeof dbMedia[0]) => {
-    const newItem: MediaItem = { id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: 5 };
+    const dur = m.type === "video" && m.duration ? parseFloat(m.duration) || 10 : 5;
+    const newItem: MediaItem = { id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: dur };
     onUpdate({ ...content, type: "media", mediaItems: [...mediaItems, newItem] });
   };
 
