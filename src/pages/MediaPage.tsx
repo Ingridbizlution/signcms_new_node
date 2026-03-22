@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -295,6 +296,7 @@ const MediaPage = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { orgs, defaultOrgId } = useUserOrgs();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -451,6 +453,7 @@ const MediaPage = () => {
       formData.append("type", isImage ? "image" : "video");
       formData.append("dimensions", dimensions);
       if (duration) formData.append("duration", duration);
+      if (defaultOrgId) formData.append("org_id", defaultOrgId);
 
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
@@ -638,6 +641,7 @@ const MediaPage = () => {
       thumbnail: "", size: "-", dimensions: "auto",
       uploaded_by: user?.id,
       design_project_id: widgetForm.projectId !== NONE_PROJECT_VALUE ? widgetForm.projectId : null,
+      org_id: defaultOrgId || null,
     });
     if (error) { toast.error(error.message); } else {
       toast.success(t("widgetCreated"));

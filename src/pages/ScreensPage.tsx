@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,14 +35,16 @@ interface Screen {
   location: string;
   resolution: string;
   online: boolean;
+  org_id?: string | null;
 }
 
-const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080" };
+const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080", org_id: "" };
 
 export default function ScreensPage() {
   const { isAdmin } = useUserRole();
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { orgs, defaultOrgId } = useUserOrgs();
   const [screens, setScreens] = useState<Screen[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -103,7 +106,7 @@ export default function ScreensPage() {
 
   const fetchScreens = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any).from("screens").select("id, name, branch, location, resolution, online").order("created_at", { ascending: true });
+    const { data, error } = await (supabase as any).from("screens").select("id, name, branch, location, resolution, online, org_id").order("created_at", { ascending: true });
     if (error) { toast.error(error.message); }
     else {
       setScreens(data || []);
@@ -127,10 +130,10 @@ export default function ScreensPage() {
     return matchSearch && s.branch === groupFilter;
   });
 
-  const openAdd = () => { setEditingId(null); setForm(emptyForm); setIsCreatingInForm(false); setInlineNewGroup(""); setDialogOpen(true); };
+  const openAdd = () => { setEditingId(null); setForm({ ...emptyForm, org_id: defaultOrgId || "" }); setIsCreatingInForm(false); setInlineNewGroup(""); setDialogOpen(true); };
   const openEdit = (screen: Screen) => {
     setEditingId(screen.id);
-    setForm({ name: screen.name, branch: screen.branch || "", location: screen.location, resolution: screen.resolution });
+    setForm({ name: screen.name, branch: screen.branch || "", location: screen.location, resolution: screen.resolution, org_id: screen.org_id || "" });
     setIsCreatingInForm(false);
     setInlineNewGroup("");
     setDialogOpen(true);
@@ -141,11 +144,11 @@ export default function ScreensPage() {
     if (!form.name) { toast.error(t("screensFillRequired")); return; }
     setSaving(true);
     if (editingId) {
-      const { error } = await (supabase as any).from("screens").update({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, updated_at: new Date().toISOString() }).eq("id", editingId);
+      const { error } = await (supabase as any).from("screens").update({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, updated_at: new Date().toISOString() }).eq("id", editingId);
       if (error) toast.error(error.message);
       else toast.success(t("screensUpdated"));
     } else {
-      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, uploaded_by: user?.id });
+      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, uploaded_by: user?.id });
       if (error) toast.error(error.message);
       else toast.success(t("screensAdded"));
     }
@@ -410,6 +413,18 @@ export default function ScreensPage() {
                 </SelectContent>
               </Select>
             </div>
+            {orgs.length > 0 && (
+              <div className="space-y-2">
+                <Label>{t("teamOrg")}</Label>
+                <Select value={form.org_id || "none"} onValueChange={(v) => setForm({ ...form, org_id: v === "none" ? "" : v })}>
+                  <SelectTrigger><SelectValue placeholder={t("teamSelectOrg")} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("screensUngrouped")}</SelectItem>
+                    {orgs.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t("cancel")}</Button></DialogClose>
