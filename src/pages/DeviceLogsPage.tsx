@@ -54,6 +54,31 @@ interface ActivityLog {
   user_name?: string;
 }
 
+// Action type determines row color: create=green, update=blue, delete=red, auth=sky, publish=emerald, admin=amber
+const ACTION_COLOR_MAP: Record<string, { bg: string; text: string; dot: string }> = {
+  create: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-green-700 dark:text-green-400", dot: "bg-green-500" },
+  update: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-blue-700 dark:text-blue-400", dot: "bg-blue-500" },
+  delete: { bg: "bg-red-50 dark:bg-red-950/20", text: "text-red-700 dark:text-red-400", dot: "bg-red-500" },
+  login: { bg: "bg-sky-50 dark:bg-sky-950/20", text: "text-sky-700 dark:text-sky-400", dot: "bg-sky-500" },
+  logout: { bg: "bg-slate-50 dark:bg-slate-950/20", text: "text-slate-700 dark:text-slate-400", dot: "bg-slate-400" },
+  publish: { bg: "bg-emerald-50 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-400", dot: "bg-emerald-500" },
+  admin: { bg: "bg-amber-50 dark:bg-amber-950/20", text: "text-amber-700 dark:text-amber-400", dot: "bg-amber-500" },
+};
+
+function getActionColor(action: string, category: string) {
+  const lower = action.toLowerCase();
+  if (lower.includes("刪除") || lower.includes("delete") || lower.includes("移除")) return ACTION_COLOR_MAP.delete;
+  if (lower.includes("新增") || lower.includes("create") || lower.includes("建立") || lower.includes("上傳")) return ACTION_COLOR_MAP.create;
+  if (lower.includes("修改") || lower.includes("update") || lower.includes("編輯") || lower.includes("變更")) return ACTION_COLOR_MAP.update;
+  if (lower.includes("發佈") || lower.includes("publish")) return ACTION_COLOR_MAP.publish;
+  if (lower.includes("登出") || lower.includes("logout")) return ACTION_COLOR_MAP.logout;
+  if (lower.includes("登入") || lower.includes("login")) return ACTION_COLOR_MAP.login;
+  if (category === "admin") return ACTION_COLOR_MAP.admin;
+  if (category === "publish") return ACTION_COLOR_MAP.publish;
+  if (category === "auth") return ACTION_COLOR_MAP.login;
+  return ACTION_COLOR_MAP.update;
+}
+
 const ACTIVITY_CATEGORY_CONFIG: Record<string, { icon: typeof User; color: string; label: { zh: string; en: string; ja: string } }> = {
   auth: { icon: LogIn, color: "bg-sky-500/10 text-sky-600 dark:text-sky-400", label: { zh: "登入/登出", en: "Auth", ja: "認証" } },
   screen: { icon: Monitor, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400", label: { zh: "螢幕管理", en: "Screen", ja: "スクリーン" } },
