@@ -448,9 +448,10 @@ export default function SchedulesPage() {
               <div className="border-t border-border pt-3 mt-3">
                 <p className="text-xs text-muted-foreground mb-2">{t("schedClickToAdd")}</p>
                 <Tabs defaultValue="media" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsList className="grid w-full grid-cols-3 h-8">
                     <TabsTrigger value="media" className="text-xs gap-1"><FileImage className="w-3 h-3" />{t("schedTabMedia")}</TabsTrigger>
                     <TabsTrigger value="design" className="text-xs gap-1"><Layers className="w-3 h-3" />{t("schedTabDesign")}</TabsTrigger>
+                    <TabsTrigger value="widget" className="text-xs gap-1"><Code2 className="w-3 h-3" />{t("schedTabWidget")}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="media" className="mt-2">
                     {mediaOptions.length === 0 ? (
@@ -478,6 +479,20 @@ export default function SchedulesPage() {
                               <span className="text-xs text-foreground block truncate">{dp.name}</span>
                               <span className="text-[10px] text-muted-foreground">{dp.aspect}</span>
                             </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="widget" className="mt-2">
+                    {widgetOptions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
+                        {widgetOptions.map((w) => (
+                          <button key={w.id} type="button" onClick={() => addWidgetToForm(w)} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/50 hover:bg-muted text-sm text-left transition-colors">
+                            <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
+                            <span className="truncate text-xs text-foreground">{w.name}</span>
                           </button>
                         ))}
                       </div>
