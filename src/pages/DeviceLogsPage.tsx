@@ -13,11 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor,
   RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
-  Trash2, Send, ShieldCheck, Image, Brush, ChevronLeft, ChevronRight, BarChart3, Play, Clock,
+  Trash2, Send, ShieldCheck, Image, Brush, ChevronLeft, ChevronRight, BarChart3, Play, Clock, CalendarIcon, X,
 } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter, subDays } from "date-fns";
 import * as XLSX from "xlsx";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 // --- Device log types ---
 interface DeviceLog {
@@ -119,8 +122,11 @@ export default function SystemLogsPage() {
   const ACTIVITY_PAGE_SIZE = 50;
 
   // --- Playback reports state ---
-  const [playbackLogs, setPlaybackLogs] = useState<{ id: string; media_name: string; duration_seconds: number; played_at: string; org_id: string | null }[]>([]);
+  const [playbackLogs, setPlaybackLogs] = useState<{ id: string; screen_id: string | null; media_name: string; duration_seconds: number; played_at: string; org_id: string | null }[]>([]);
   const [playbackLoading, setPlaybackLoading] = useState(true);
+  const [playbackFilterScreen, setPlaybackFilterScreen] = useState("all");
+  const [playbackStartDate, setPlaybackStartDate] = useState<Date | undefined>(undefined);
+  const [playbackEndDate, setPlaybackEndDate] = useState<Date | undefined>(undefined);
 
   // --- Shared ---
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
@@ -212,12 +218,25 @@ export default function SystemLogsPage() {
   const activityTotalPages = Math.max(1, Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE));
   const paginatedActivity = filteredActivity.slice((activityPage - 1) * ACTIVITY_PAGE_SIZE, activityPage * ACTIVITY_PAGE_SIZE);
 
-  // --- Playback computed data ---
+  // --- Playback filtered data ---
+  const filteredPlayback = useMemo(() => {
+    return playbackLogs.filter(l => {
+      if (playbackFilterScreen !== "all" && l.screen_id !== playbackFilterScreen) return false;
+      if (playbackStartDate && new Date(l.played_at) < startOfDay(playbackStartDate)) return false;
+      if (playbackEndDate) {
+        const endOfEndDate = new Date(playbackEndDate);
+        endOfEndDate.setHours(23, 59, 59, 999);
+        if (new Date(l.played_at) > endOfEndDate) return false;
+      }
+      return true;
+    });
+  }, [playbackLogs, playbackFilterScreen, playbackStartDate, playbackEndDate]);
+
   const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
   const playbackSummary = useMemo(() => {
     const map = new Map<string, { count: number; totalSeconds: number }>();
-    playbackLogs.forEach(l => {
+    filteredPlayback.forEach(l => {
       const existing = map.get(l.media_name) || { count: 0, totalSeconds: 0 };
       existing.count += 1;
       existing.totalSeconds += l.duration_seconds;
@@ -226,19 +245,23 @@ export default function SystemLogsPage() {
     return Array.from(map.entries())
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.count - a.count);
-  }, [playbackLogs]);
+  }, [filteredPlayback]);
 
   const playbackTrend = useMemo(() => {
+    const endD = playbackEndDate || new Date();
+    const startD = playbackStartDate || subDays(endD, 6);
+    const diffDays = Math.max(1, Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const numDays = Math.min(diffDays, 30); // cap at 30 days
     const days: { date: string; count: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const day = subDays(new Date(), i);
+    for (let i = numDays - 1; i >= 0; i--) {
+      const day = subDays(endD, i);
       const dayStr = format(day, "yyyy-MM-dd");
       const label = format(day, "MM/dd");
-      const count = playbackLogs.filter(l => format(new Date(l.played_at), "yyyy-MM-dd") === dayStr).length;
+      const count = filteredPlayback.filter(l => format(new Date(l.played_at), "yyyy-MM-dd") === dayStr).length;
       days.push({ date: label, count });
     }
     return days;
-  }, [playbackLogs]);
+  }, [filteredPlayback, playbackStartDate, playbackEndDate]);
 
   const labels = {
     title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
@@ -517,17 +540,59 @@ export default function SystemLogsPage() {
 
         {/* ===== Playback Reports Tab ===== */}
         <TabsContent value="playback" className="space-y-6 mt-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <Select value={playbackFilterScreen} onValueChange={setPlaybackFilterScreen}>
+              <SelectTrigger className="w-[180px]">
+                <Monitor className="w-4 h-4 mr-2 text-muted-foreground" /><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{{ zh: "所有螢幕", en: "All Screens", ja: "全スクリーン" }[language]}</SelectItem>
+                {screens.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal", !playbackStartDate && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {playbackStartDate ? format(playbackStartDate, "yyyy-MM-dd") : <span>{{ zh: "起始日期", en: "Start date", ja: "開始日" }[language]}</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={playbackStartDate} onSelect={setPlaybackStartDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">~</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal", !playbackEndDate && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {playbackEndDate ? format(playbackEndDate, "yyyy-MM-dd") : <span>{{ zh: "結束日期", en: "End date", ja: "終了日" }[language]}</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={playbackEndDate} onSelect={setPlaybackEndDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            {(playbackStartDate || playbackEndDate || playbackFilterScreen !== "all") && (
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => { setPlaybackFilterScreen("all"); setPlaybackStartDate(undefined); setPlaybackEndDate(undefined); }}>
+                <X className="w-3.5 h-3.5" />{{ zh: "清除篩選", en: "Clear", ja: "クリア" }[language]}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{{ zh: `共 ${filteredPlayback.length} 筆播放紀錄`, en: `${filteredPlayback.length} playback records`, ja: `${filteredPlayback.length} 件の再生記録` }[language]}</p>
+
           {playbackLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-          ) : playbackLogs.length === 0 ? (
+          ) : filteredPlayback.length === 0 ? (
             <Card className="p-12 text-center text-muted-foreground"><BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{{ zh: "暫無播放紀錄", en: "No playback data", ja: "再生データなし" }[language]}</p></Card>
           ) : (
             <>
-              {/* 7-day trend chart */}
+              {/* Trend chart */}
               <Card className="p-5">
                 <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-primary" />
-                  {{ zh: "過去 7 天播放趨勢", en: "7-Day Playback Trend", ja: "過去7日間の再生トレンド" }[language]}
+                  {{ zh: "播放趨勢", en: "Playback Trend", ja: "再生トレンド" }[language]}
                 </h3>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={playbackTrend} barSize={32}>
