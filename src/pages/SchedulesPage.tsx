@@ -284,7 +284,7 @@ export default function SchedulesPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">播放清單排程</h1>
           <p className="text-sm text-muted-foreground mt-1">
