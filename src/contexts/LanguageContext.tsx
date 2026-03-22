@@ -59,7 +59,7 @@ const translations = {
   dashTotalMedia: { zh: "素材總數", en: "Total Media", ja: "メディア合計" },
   dashTotalSchedules: { zh: "啟用排程", en: "Active Schedules", ja: "有効スケジュール" },
   dashByType: { zh: "素材類型分佈", en: "Media by Type", ja: "メディアタイプ分布" },
-  dashByBranch: { zh: "各分店螢幕數", en: "Screens by Branch", ja: "店舗別スクリーン数" },
+  dashByBranch: { zh: "各群組螢幕數", en: "Screens by Group", ja: "グループ別スクリーン数" },
 
   // Screens
   screensTitle: { zh: "螢幕管理", en: "Screen Management", ja: "スクリーン管理" },
