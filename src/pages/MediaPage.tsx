@@ -723,6 +723,9 @@ export default function MediaPage() {
                   text: widgetForm.text,
                   speed: widgetForm.speed,
                   format: widgetForm.format,
+                  clockStyle: widgetForm.clockStyle,
+                  showDate: widgetForm.showDate,
+                  timezone: widgetForm.timezone,
                   bgColor: widgetForm.bgColor,
                   textColor: widgetForm.textColor,
                 }} />
