@@ -821,7 +821,7 @@ export default function ScreensPage() {
                         temperature: { label: "溫濕度感測", icon: "🌡️", color: "border-emerald-500/30 bg-emerald-500/5" },
                         noise: { label: "噪音偵測", icon: "🔊", color: "border-purple-500/30 bg-purple-500/5" },
                       };
-                      const cfg = typeConfig[device.type] || { label: device.type, icon: "📡", color: "border-border bg-muted/30" };
+                      const cfg = typeConfig[device.device_type] || { label: device.device_type, icon: "📡", color: "border-border bg-muted/30" };
                       return (
                         <div key={device.id} className={`flex items-center gap-3 p-3 rounded-lg border ${cfg.color}`}>
                           <span className="text-xl">{cfg.icon}</span>
@@ -835,7 +835,9 @@ export default function ScreensPage() {
                             <span className={`w-1.5 h-1.5 rounded-full ${device.status === "online" ? "bg-success" : "bg-destructive"}`} />
                             {device.status === "online" ? "連線中" : "離線"}
                           </span>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => {
+                            const { error } = await (supabase as any).from("iot_devices").delete().eq("id", device.id);
+                            if (error) { toast.error(error.message); return; }
                             setIotDevices((prev) => prev.filter((d) => d.id !== device.id));
                             toast.success("裝置已移除");
                           }}>
