@@ -19,7 +19,18 @@ import {
   Pencil,
   Plus,
   Settings2,
+  Code2,
+  Calendar,
+  Globe,
+  Type,
+  CloudSun,
+  QrCode,
+  Timer,
+  Youtube,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { Switch } from "@/components/ui/switch";
+import { DialogClose } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +72,215 @@ interface ProjectItem {
 
 const NONE_PROJECT_VALUE = "__none__";
 
+type WidgetSubType = "date" | "clock" | "webpage" | "marquee" | "qrcode" | "countdown" | "youtube" | "weather";
+type WidgetAnimation = "none" | "fadeIn" | "slideUp" | "bounce" | "zoomIn" | "flipIn";
+
+interface WidgetConfig {
+  widgetType: WidgetSubType;
+  url?: string;
+  text?: string;
+  speed?: "slow" | "normal" | "fast";
+  format?: "12" | "24";
+  clockStyle?: "digital" | "analog";
+  showDate?: boolean;
+  timezone?: string;
+  bgColor?: string;
+  textColor?: string;
+  qrcodeContent?: string;
+  targetDate?: string;
+  countdownTitle?: string;
+  youtubeUrl?: string;
+  city?: string;
+  fontSize?: "small" | "medium" | "large" | "xlarge";
+  qrcodeSize?: number;
+  animation?: WidgetAnimation;
+}
+
+const WIDGET_ICONS: Record<WidgetSubType, any> = {
+  date: Calendar, clock: Clock, webpage: Globe, marquee: Type, qrcode: QrCode, countdown: Timer, youtube: Youtube, weather: CloudSun,
+};
+
+const TIMEZONE_OPTIONS = [
+  { value: "Asia/Taipei", label: "Asia/Taipei (UTC+8)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (UTC+9)" },
+  { value: "America/New_York", label: "America/New_York (UTC-5)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (UTC-8)" },
+  { value: "Europe/London", label: "Europe/London (UTC+0)" },
+  { value: "Europe/Berlin", label: "Europe/Berlin (UTC+1)" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai (UTC+8)" },
+  { value: "Asia/Singapore", label: "Asia/Singapore (UTC+8)" },
+  { value: "Australia/Sydney", label: "Australia/Sydney (UTC+11)" },
+];
+
+const defaultWidgetForm: {
+  name: string; widgetType: WidgetSubType; url: string; text: string;
+  speed: "slow" | "normal" | "fast"; format: "12" | "24";
+  clockStyle: "digital" | "analog"; showDate: boolean; timezone: string;
+  bgColor: string; textColor: string; qrcodeContent: string; targetDate: string;
+  countdownTitle: string; youtubeUrl: string; city: string;
+  fontSize: "small" | "medium" | "large" | "xlarge"; qrcodeSize: number;
+  animation: WidgetAnimation; projectId: string;
+} = {
+  name: "",
+  widgetType: "clock",
+  url: "",
+  text: "",
+  speed: "normal",
+  format: "24",
+  clockStyle: "digital",
+  showDate: true,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  bgColor: "#1a1a2e",
+  textColor: "#ffffff",
+  qrcodeContent: "",
+  targetDate: "",
+  countdownTitle: "",
+  youtubeUrl: "",
+  city: "",
+  fontSize: "medium",
+  qrcodeSize: 128,
+  animation: "none",
+  projectId: NONE_PROJECT_VALUE,
+};
+
+function parseWidgetConfig(url: string): WidgetConfig | null {
+  if (!url?.startsWith("widget://")) return null;
+  try { return JSON.parse(url.replace("widget://", "")); } catch { return null; }
+}
+
+// ── Widget Preview (lightweight) ───────────────────────────────────
+function WidgetPreviewCard({ config }: { config: WidgetConfig }) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    if (config.widgetType === "clock" || config.widgetType === "date" || config.widgetType === "countdown") {
+      const timer = setInterval(() => setNow(new Date()), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [config.widgetType]);
+
+  const bg = config.bgColor || "#1a1a2e";
+  const fg = config.textColor || "#ffffff";
+  const fontSize = config.fontSize || "medium";
+  const ZONE_FS: Record<string, Record<string, string>> = {
+    small: { time: "text-base", title: "text-xs", countdown: "text-base", marquee: "text-xs" },
+    medium: { time: "text-2xl", title: "text-[10px]", countdown: "text-lg", marquee: "text-sm" },
+    large: { time: "text-3xl", title: "text-sm", countdown: "text-2xl", marquee: "text-lg" },
+    xlarge: { time: "text-4xl", title: "text-base", countdown: "text-3xl", marquee: "text-xl" },
+  };
+  const zfs = ZONE_FS[fontSize] || ZONE_FS.medium;
+
+  if (config.widgetType === "clock") {
+    const tz = config.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (config.clockStyle === "analog") {
+      const hParts = now.toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric", hour12: false, timeZone: tz }).split(":");
+      const h = parseInt(hParts[0]), m = parseInt(hParts[1]), s = parseInt(hParts[2]);
+      const hDeg = (h % 12) * 30 + m * 0.5, mDeg = m * 6, sDeg = s * 6;
+      return (
+        <div className="w-full h-full flex items-center justify-center" style={{ background: bg }}>
+          <svg viewBox="0 0 200 200" className="w-[70%] max-w-[160px]">
+            <circle cx="100" cy="100" r="96" fill="none" stroke={fg} strokeWidth="2" opacity="0.15" />
+            {[...Array(12)].map((_, i) => {
+              const num = i === 0 ? 12 : i;
+              const angle = (i * 30 - 90) * Math.PI / 180;
+              return <text key={i} x={100 + 78 * Math.cos(angle)} y={100 + 78 * Math.sin(angle)} textAnchor="middle" dominantBaseline="central" fill={fg} fontSize="14" fontWeight="600" opacity="0.8">{num}</text>;
+            })}
+            <polygon points={`${100 + 45 * Math.cos((hDeg - 90) * Math.PI / 180)},${100 + 45 * Math.sin((hDeg - 90) * Math.PI / 180)} ${100 + 5 * Math.cos(hDeg * Math.PI / 180)},${100 + 5 * Math.sin(hDeg * Math.PI / 180)} ${100 - 10 * Math.cos((hDeg - 90) * Math.PI / 180)},${100 - 10 * Math.sin((hDeg - 90) * Math.PI / 180)} ${100 - 5 * Math.cos(hDeg * Math.PI / 180)},${100 - 5 * Math.sin(hDeg * Math.PI / 180)}`} fill={fg} opacity="0.9" />
+            <polygon points={`${100 + 65 * Math.cos((mDeg - 90) * Math.PI / 180)},${100 + 65 * Math.sin((mDeg - 90) * Math.PI / 180)} ${100 + 4 * Math.cos(mDeg * Math.PI / 180)},${100 + 4 * Math.sin(mDeg * Math.PI / 180)} ${100 - 12 * Math.cos((mDeg - 90) * Math.PI / 180)},${100 - 12 * Math.sin((mDeg - 90) * Math.PI / 180)} ${100 - 4 * Math.cos(mDeg * Math.PI / 180)},${100 - 4 * Math.sin(mDeg * Math.PI / 180)}`} fill={fg} opacity="0.85" />
+            <line x1={100 - 18 * Math.cos((sDeg - 90) * Math.PI / 180)} y1={100 - 18 * Math.sin((sDeg - 90) * Math.PI / 180)} x2={100 + 72 * Math.cos((sDeg - 90) * Math.PI / 180)} y2={100 + 72 * Math.sin((sDeg - 90) * Math.PI / 180)} stroke="hsl(0 70% 55%)" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="100" cy="100" r="5" fill={fg} />
+          </svg>
+        </div>
+      );
+    }
+    const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: config.format === "12", timeZone: tz };
+    const timeStr = now.toLocaleTimeString("en-US", opts);
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
+        <span className={`${zfs.time} font-mono font-bold tracking-wider`}>{timeStr}</span>
+        {config.showDate && <span className="text-[10px] opacity-60">{now.toLocaleDateString("zh-TW", { month: "short", day: "numeric", timeZone: tz })}</span>}
+      </div>
+    );
+  }
+
+  if (config.widgetType === "date") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
+        <span className="text-sm font-medium opacity-70">{now.toLocaleDateString("zh-TW", { weekday: "long" })}</span>
+        <span className="text-xl font-bold">{now.toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric" })}</span>
+      </div>
+    );
+  }
+
+  if (config.widgetType === "marquee" && config.text) {
+    return (
+      <div className="w-full h-full flex items-center overflow-hidden" style={{ background: bg, color: fg }}>
+        <div className={`animate-marquee whitespace-nowrap ${zfs.marquee} font-medium`}>{config.text}</div>
+      </div>
+    );
+  }
+
+  if (config.widgetType === "webpage") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
+        <Globe className="w-6 h-6 opacity-50" />
+        <span className="text-[10px] opacity-60 truncate max-w-[80%]">{config.url || "URL"}</span>
+      </div>
+    );
+  }
+
+  if (config.widgetType === "qrcode") {
+    const qrSize = config.qrcodeSize ? Math.min(config.qrcodeSize, 120) : 80;
+    return (
+      <div className="w-full h-full flex items-center justify-center" style={{ background: bg }}>
+        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={qrSize} bgColor={bg} fgColor={fg} level="M" />
+      </div>
+    );
+  }
+
+  if (config.widgetType === "countdown") {
+    const target = config.targetDate ? new Date(config.targetDate).getTime() : Date.now() + 86400000;
+    const diff = Math.max(0, target - now.getTime());
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
+        {config.countdownTitle && <span className={`${zfs.title} font-bold opacity-70`}>{config.countdownTitle}</span>}
+        <div className="flex gap-2">
+          {[days, hours, mins, secs].map((v, i) => (
+            <span key={i} className={`${zfs.countdown} font-mono font-bold`}>{String(v).padStart(2, "0")}</span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (config.widgetType === "youtube") {
+    return (
+      <div className="w-full h-full flex items-center justify-center" style={{ background: bg, color: fg }}>
+        <Youtube className="w-8 h-8 opacity-50" />
+      </div>
+    );
+  }
+
+  if (config.widgetType === "weather") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ background: bg, color: fg }}>
+        <CloudSun className="w-8 h-8 opacity-50" />
+        <span className="text-[10px] font-medium">{config.city || "City"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center" style={{ background: bg, color: fg }}>
+      <Code2 className="w-6 h-6 opacity-50" />
+    </div>
+  );
+}
+
 const getPreviewIcon = (type: MediaType) => {
   if (type === "image") return <FileImage className="w-10 h-10 text-muted-foreground" />;
   if (type === "video") return <FileVideo className="w-10 h-10 text-muted-foreground" />;
@@ -93,6 +313,8 @@ const MediaPage = () => {
   const [editProjectName, setEditProjectName] = useState("");
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [updatingProjectItemId, setUpdatingProjectItemId] = useState<string | null>(null);
+  const [widgetDialogOpen, setWidgetDialogOpen] = useState(false);
+  const [widgetForm, setWidgetForm] = useState(defaultWidgetForm);
 
   const fetchMedia = async () => {
     setLoading(true);
@@ -333,6 +555,32 @@ const MediaPage = () => {
     }
   };
 
+  const handleCreateWidget = async () => {
+    if (!widgetForm.name.trim()) { toast.error(t("widgetFillRequired")); return; }
+    const config: WidgetConfig = {
+      widgetType: widgetForm.widgetType, url: widgetForm.url, text: widgetForm.text,
+      speed: widgetForm.speed, format: widgetForm.format, clockStyle: widgetForm.clockStyle,
+      showDate: widgetForm.showDate, timezone: widgetForm.timezone, bgColor: widgetForm.bgColor,
+      textColor: widgetForm.textColor, qrcodeContent: widgetForm.qrcodeContent,
+      targetDate: widgetForm.targetDate, countdownTitle: widgetForm.countdownTitle,
+      youtubeUrl: widgetForm.youtubeUrl, city: widgetForm.city, fontSize: widgetForm.fontSize,
+      qrcodeSize: widgetForm.qrcodeSize, animation: widgetForm.animation,
+    };
+    const { error } = await (supabase as any).from("media_items").insert({
+      name: widgetForm.name.trim(), type: "widget",
+      url: "widget://" + JSON.stringify(config),
+      thumbnail: "", size: "-", dimensions: "auto",
+      uploaded_by: user?.id,
+      design_project_id: widgetForm.projectId !== NONE_PROJECT_VALUE ? widgetForm.projectId : null,
+    });
+    if (error) { toast.error(error.message); } else {
+      toast.success(t("widgetCreated"));
+      setWidgetDialogOpen(false);
+      setWidgetForm({ ...defaultWidgetForm });
+      fetchMedia();
+    }
+  };
+
   const renderProjectSelect = (item: MediaItemRow, compact = false) => {
     if (!isAdmin) {
       return (
@@ -386,6 +634,12 @@ const MediaPage = () => {
             </Button>
           )}
           {isAdmin && <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*" onChange={handleUpload} />}
+          {isAdmin && (
+            <Button variant="outline" className="gap-2" onClick={() => setWidgetDialogOpen(true)}>
+              <Code2 className="w-4 h-4" />
+              {t("mediaAddWidget")}
+            </Button>
+          )}
           {isAdmin && (
             <Button className="gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -464,7 +718,9 @@ const MediaPage = () => {
           {filteredMedia.map((item) => (
             <Card key={item.id} className="overflow-hidden cursor-pointer" onClick={() => setPreviewItem(item)}>
               <div className="aspect-video bg-muted flex items-center justify-center overflow-hidden relative">
-                {item.type === "image" && item.url ? (
+                {item.type === "widget" ? (
+                  (() => { const c = parseWidgetConfig(item.url); return c ? <WidgetPreviewCard config={c} /> : <Code2 className="w-10 h-10 text-muted-foreground" />; })()
+                ) : item.type === "image" && item.url ? (
                   <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
                   getPreviewIcon(item.type)
@@ -501,7 +757,9 @@ const MediaPage = () => {
           {filteredMedia.map((item) => (
             <Card key={item.id} className="flex cursor-pointer items-center gap-4 p-3" onClick={() => setPreviewItem(item)}>
               <div className="flex h-12 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                {item.type === "image" && item.url ? (
+                {item.type === "widget" ? (
+                  (() => { const c = parseWidgetConfig(item.url); return c ? <WidgetPreviewCard config={c} /> : <Code2 className="w-6 h-6 text-muted-foreground" />; })()
+                ) : item.type === "image" && item.url ? (
                   <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                 ) : (
                   getPreviewIcon(item.type)
@@ -545,7 +803,9 @@ const MediaPage = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="aspect-video overflow-hidden rounded-lg bg-muted flex items-center justify-center">
-              {previewItem?.type === "image" && previewItem.url ? (
+              {previewItem?.type === "widget" ? (
+                (() => { const c = parseWidgetConfig(previewItem.url); return c ? <WidgetPreviewCard config={c} /> : <Code2 className="w-16 h-16 opacity-30" />; })()
+              ) : previewItem?.type === "image" && previewItem.url ? (
                 <img src={previewItem.url} alt={previewItem.name} className="h-full w-full object-contain" />
               ) : previewItem?.type === "video" && previewItem.url ? (
                 <video src={previewItem.url} controls className="h-full w-full" />
@@ -679,6 +939,164 @@ const MediaPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Widget Creation Dialog */}
+      <Dialog open={widgetDialogOpen} onOpenChange={setWidgetDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Code2 className="w-5 h-5 text-primary" />{t("mediaAddWidget")}</DialogTitle>
+            <DialogDescription className="sr-only">{t("mediaAddWidget")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1 min-h-0">
+            <div className="space-y-2">
+              <Label>{t("widgetName")} *</Label>
+              <Input value={widgetForm.name} onChange={(e) => setWidgetForm({ ...widgetForm, name: e.target.value })} placeholder={t("widgetNamePlaceholder")} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("mediaProjectGroup")}</Label>
+              <Select value={widgetForm.projectId} onValueChange={(v) => setWidgetForm({ ...widgetForm, projectId: v })}>
+                <SelectTrigger><FolderOpen className="w-4 h-4 mr-1.5 text-muted-foreground" /><SelectValue placeholder={t("mediaNoProject")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_PROJECT_VALUE}>{t("mediaNoProject")}</SelectItem>
+                  {projects.map((p) => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("widgetType")}</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {(["clock", "date", "webpage", "marquee", "qrcode", "countdown", "youtube", "weather"] as WidgetSubType[]).map((wt) => {
+                  const Icon = WIDGET_ICONS[wt];
+                  const labels: Record<WidgetSubType, string> = { date: t("widgetDate"), clock: t("widgetClock"), webpage: t("widgetWebpage"), marquee: t("widgetMarquee"), qrcode: t("widgetQrcode"), countdown: t("widgetCountdown"), youtube: t("widgetYoutube"), weather: t("widgetWeather") };
+                  return (
+                    <button key={wt} type="button" onClick={() => setWidgetForm({ ...widgetForm, widgetType: wt })}
+                      className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all text-center ${widgetForm.widgetType === wt ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+                      <Icon className={`w-6 h-6 ${widgetForm.widgetType === wt ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-xs font-medium">{labels[wt]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {widgetForm.widgetType === "clock" && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>{t("widgetClockStyle")}</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setWidgetForm({ ...widgetForm, clockStyle: "digital" })}
+                      className={`p-2.5 rounded-lg border-2 text-sm ${widgetForm.clockStyle === "digital" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:border-primary/40"}`}>{t("widgetDigital")}</button>
+                    <button type="button" onClick={() => setWidgetForm({ ...widgetForm, clockStyle: "analog" })}
+                      className={`p-2.5 rounded-lg border-2 text-sm ${widgetForm.clockStyle === "analog" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:border-primary/40"}`}>{t("widgetAnalog")}</button>
+                  </div>
+                </div>
+                {widgetForm.clockStyle === "digital" && (
+                  <div className="space-y-2">
+                    <Label>{t("widgetFormat")}</Label>
+                    <Select value={widgetForm.format} onValueChange={(v) => setWidgetForm({ ...widgetForm, format: v as "12" | "24" })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="24">{t("widgetFormat24")}</SelectItem>
+                        <SelectItem value="12">{t("widgetFormat12")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <Label>{t("widgetShowDate")}</Label>
+                  <Switch checked={widgetForm.showDate} onCheckedChange={(v) => setWidgetForm({ ...widgetForm, showDate: v })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t("widgetTimezone")}</Label>
+                  <Select value={widgetForm.timezone} onValueChange={(v) => setWidgetForm({ ...widgetForm, timezone: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {TIMEZONE_OPTIONS.map((tz) => (<SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {widgetForm.widgetType === "webpage" && (
+              <div className="space-y-2"><Label>{t("widgetUrl")}</Label><Input value={widgetForm.url} onChange={(e) => setWidgetForm({ ...widgetForm, url: e.target.value })} placeholder={t("widgetUrlPlaceholder")} /></div>
+            )}
+
+            {widgetForm.widgetType === "marquee" && (
+              <>
+                <div className="space-y-2"><Label>{t("widgetText")}</Label><Input value={widgetForm.text} onChange={(e) => setWidgetForm({ ...widgetForm, text: e.target.value })} placeholder={t("widgetTextPlaceholder")} /></div>
+                <div className="space-y-2">
+                  <Label>{t("widgetSpeed")}</Label>
+                  <Select value={widgetForm.speed} onValueChange={(v) => setWidgetForm({ ...widgetForm, speed: v as "slow" | "normal" | "fast" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="slow">{t("widgetSpeedSlow")}</SelectItem>
+                      <SelectItem value="normal">{t("widgetSpeedNormal")}</SelectItem>
+                      <SelectItem value="fast">{t("widgetSpeedFast")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {widgetForm.widgetType === "qrcode" && (
+              <div className="space-y-2"><Label>{t("widgetQrcodeContent")}</Label><Input value={widgetForm.qrcodeContent} onChange={(e) => setWidgetForm({ ...widgetForm, qrcodeContent: e.target.value })} placeholder={t("widgetQrcodePlaceholder")} /></div>
+            )}
+
+            {widgetForm.widgetType === "countdown" && (
+              <>
+                <div className="space-y-2"><Label>{t("widgetCountdownTitle")}</Label><Input value={widgetForm.countdownTitle} onChange={(e) => setWidgetForm({ ...widgetForm, countdownTitle: e.target.value })} placeholder={t("widgetCountdownTitlePlaceholder")} /></div>
+                <div className="space-y-2"><Label>{t("widgetTargetDate")}</Label><Input type="datetime-local" value={widgetForm.targetDate} onChange={(e) => setWidgetForm({ ...widgetForm, targetDate: e.target.value })} /></div>
+              </>
+            )}
+
+            {widgetForm.widgetType === "youtube" && (
+              <div className="space-y-2"><Label>{t("widgetYoutubeUrl")}</Label><Input value={widgetForm.youtubeUrl} onChange={(e) => setWidgetForm({ ...widgetForm, youtubeUrl: e.target.value })} placeholder={t("widgetYoutubeUrlPlaceholder")} /></div>
+            )}
+
+            {widgetForm.widgetType === "weather" && (
+              <div className="space-y-2"><Label>{t("widgetCity")}</Label><Input value={widgetForm.city} onChange={(e) => setWidgetForm({ ...widgetForm, city: e.target.value })} placeholder={t("widgetCityPlaceholder")} /></div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>{t("widgetBgColor")}</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={widgetForm.bgColor} onChange={(e) => setWidgetForm({ ...widgetForm, bgColor: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer" />
+                  <Input value={widgetForm.bgColor} onChange={(e) => setWidgetForm({ ...widgetForm, bgColor: e.target.value })} className="flex-1" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("widgetTextColor")}</Label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={widgetForm.textColor} onChange={(e) => setWidgetForm({ ...widgetForm, textColor: e.target.value })} className="w-8 h-8 rounded border border-border cursor-pointer" />
+                  <Input value={widgetForm.textColor} onChange={(e) => setWidgetForm({ ...widgetForm, textColor: e.target.value })} className="flex-1" />
+                </div>
+              </div>
+            </div>
+
+            {/* Live Preview */}
+            <div className="space-y-2">
+              <Label>{t("widgetLivePreview")}</Label>
+              <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted/30">
+                <WidgetPreviewCard config={{
+                  widgetType: widgetForm.widgetType, url: widgetForm.url, text: widgetForm.text,
+                  speed: widgetForm.speed, format: widgetForm.format, clockStyle: widgetForm.clockStyle,
+                  showDate: widgetForm.showDate, timezone: widgetForm.timezone, bgColor: widgetForm.bgColor,
+                  textColor: widgetForm.textColor, qrcodeContent: widgetForm.qrcodeContent,
+                  targetDate: widgetForm.targetDate, countdownTitle: widgetForm.countdownTitle,
+                  youtubeUrl: widgetForm.youtubeUrl, city: widgetForm.city, fontSize: widgetForm.fontSize,
+                  qrcodeSize: widgetForm.qrcodeSize, animation: widgetForm.animation,
+                }} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">{t("cancel")}</Button></DialogClose>
+            <Button onClick={handleCreateWidget} className="gap-2"><Plus className="w-4 h-4" />{t("mediaAddWidget")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
