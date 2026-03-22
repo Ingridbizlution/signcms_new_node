@@ -33,6 +33,7 @@ export default function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success(t("authSignInSuccess"));
+        logActivity({ action: "登入", category: "auth", detail: email });
         navigate("/");
       }
     } catch (error: any) {
