@@ -201,7 +201,7 @@ export default function DashboardPage() {
         {/* Screen Offline */}
         <Card className="p-4 border-destructive/20 hover-lift shadow-sm opacity-0 animate-count-up stagger-2">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center" title={t("dashOfflineWarning")}>
               <WifiOff className="w-4.5 h-4.5 text-destructive" />
             </div>
             {offlineCount > 0 && (
