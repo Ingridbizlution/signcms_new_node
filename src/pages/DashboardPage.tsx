@@ -66,10 +66,13 @@ export default function DashboardPage() {
   const offlineCount = screens.filter((s) => !s.online).length;
   const enabledSchedules = schedules.filter((s) => s.enabled).length;
 
-  // Branch distribution data
-  const branchMap = new Map<string, number>();
-  screens.forEach((s) => { branchMap.set(s.branch, (branchMap.get(s.branch) || 0) + 1); });
-  const branchData = Array.from(branchMap.entries()).map(([name, count]) => ({ name, count }));
+  // Group distribution data
+  const groupMap = new Map<string, number>();
+  screens.forEach((s) => {
+    const groupName = s.branch || t("screensUngrouped");
+    groupMap.set(groupName, (groupMap.get(groupName) || 0) + 1);
+  });
+  const branchData = Array.from(groupMap.entries()).map(([name, count]) => ({ name, count }));
 
   // Media type distribution
   const imageCount = mediaItems.filter((m) => m.type === "image").length;
@@ -95,7 +98,7 @@ export default function DashboardPage() {
     const items = scheduleItems.filter((si) => si.schedule_id === s.id);
     const totalDuration = items.reduce((sum: number, i: any) => sum + (i.duration || 0), 0);
     const screen = screenMap.get(s.screen_id);
-    return { ...s, itemCount: items.length, totalDuration, screenName: screen ? `${screen.branch} - ${screen.name}` : "-" };
+    return { ...s, itemCount: items.length, totalDuration, screenName: screen ? `${screen.branch || t("screensUngrouped")} - ${screen.name}` : "-" };
   });
 
   return (
@@ -245,7 +248,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-4 space-y-1">
                   <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors duration-200">{screen.name}</h3>
-                  <p className="text-xs text-muted-foreground">{screen.branch}</p>
+                  <p className="text-xs text-muted-foreground">{screen.branch || t("screensUngrouped")}</p>
                 </div>
               </Card>
             ))}
