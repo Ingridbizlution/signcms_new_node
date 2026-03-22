@@ -843,6 +843,11 @@ const MediaPage = () => {
                   <Badge variant={item.type === "widget" ? "default" : "outline"} className="text-[10px] px-1.5 py-0 h-4">
                     {item.type === "image" ? t("image") : item.type === "video" ? t("video") : t("widget")}
                   </Badge>
+                  {item.type === "widget" && (
+                    <Badge variant={item.is_system ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0 h-4">
+                      {item.is_system ? t("widgetSystem") : t("widgetRegular")}
+                    </Badge>
+                  )}
                   <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" />{item.size}</span>
                   {item.type !== "widget" && <span>{item.dimensions}</span>}
                   {item.duration && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{item.duration}</span>}
