@@ -112,7 +112,7 @@ export default function ScreensPage() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">螢幕管理</h1>
           <p className="text-sm text-muted-foreground mt-1">管理所有分店的電子看板設備</p>
