@@ -46,12 +46,18 @@ export default function DeviceLogsPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [logsRes, screensRes] = await Promise.all([
-      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at").order("created_at", { ascending: false }).limit(200),
+    const [logsRes, screensRes, profilesRes] = await Promise.all([
+      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(200),
       (supabase as any).from("screens").select("id, name"),
+      (supabase as any).from("profiles").select("user_id, display_name"),
     ]);
     const screenMap = new Map((screensRes.data || []).map((s: any) => [s.id, s.name]));
-    const enriched = (logsRes.data || []).map((l: any) => ({ ...l, screen_name: screenMap.get(l.screen_id) || "Unknown" }));
+    const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p.display_name]));
+    const enriched = (logsRes.data || []).map((l: any) => ({
+      ...l,
+      screen_name: screenMap.get(l.screen_id) || "Unknown",
+      operator_name: l.created_by ? (profileMap.get(l.created_by) || "Unknown") : undefined,
+    }));
     setLogs(enriched);
     setScreens(screensRes.data || []);
     setLoading(false);
