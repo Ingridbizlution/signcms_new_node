@@ -542,6 +542,12 @@ export default function ScreensPage() {
               {t("screenSettings")} — {settingsScreen?.name}
             </DialogTitle>
           </DialogHeader>
+          <Tabs defaultValue="settings">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="settings" className="gap-1.5"><Settings className="w-3.5 h-3.5" />{t("screenSettings")}</TabsTrigger>
+              <TabsTrigger value="logs" className="gap-1.5"><FileText className="w-3.5 h-3.5" />{t("navDeviceLogs")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="settings">
           <div className="space-y-5 py-2">
             {/* Network Settings */}
             <div className="space-y-3">
