@@ -956,7 +956,7 @@ export default function ContentStudioPage() {
 
                   {/* Label badge */}
                   <span className="absolute top-1 left-1 bg-accent-foreground/80 text-background text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                    <Layers className="w-2.5 h-2.5" /> {overlay.label}
+                    {overlay.locked ? <Lock className="w-2.5 h-2.5" /> : <Layers className="w-2.5 h-2.5" />} {overlay.label}
                   </span>
 
                   {/* Delete button */}
