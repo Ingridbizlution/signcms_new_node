@@ -104,6 +104,8 @@ export default function SystemLogsPage() {
   const [deviceFilterType, setDeviceFilterType] = useState("all");
   const [deviceFilterScreen, setDeviceFilterScreen] = useState("all");
   const [deviceFilterOrg, setDeviceFilterOrg] = useState("all");
+  const [devicePage, setDevicePage] = useState(1);
+  const DEVICE_PAGE_SIZE = 50;
 
   // --- Activity logs state ---
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
