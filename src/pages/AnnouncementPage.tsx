@@ -139,6 +139,8 @@ const AnnouncementPage = () => {
       id: crypto.randomUUID(),
       subject,
       department,
+      category,
+      pinned,
       content,
       imageUrl,
       startDate,
@@ -149,9 +151,10 @@ const AnnouncementPage = () => {
     setAnnouncements(updated);
     localStorage.setItem("signboard-announcements", JSON.stringify(updated));
     toast.success(t("successPublish"));
-    // Reset form
     setSubject("");
     setDepartment("");
+    setCategory("");
+    setPinned(false);
     setContent("");
     setImageUrl(null);
     setStartDate(undefined);
