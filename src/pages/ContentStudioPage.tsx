@@ -608,28 +608,34 @@ export default function ContentStudioPage() {
   // Save project
   const handleSave = useCallback(async (name?: string) => {
     setSaving(true);
-    const projectData = { name: name || currentProject?.name || "Untitled", aspect, zones, created_by: user?.id, updated_at: new Date().toISOString() };
+    const zonesData = JSON.parse(JSON.stringify([...zones.map(z => ({ ...z })), ...overlays.map(o => ({ ...o, _overlay: true }))]));
+    const projectData = { name: name || currentProject?.name || "Untitled", aspect, zones: zonesData, created_by: user?.id, updated_at: new Date().toISOString() };
     try {
       if (currentProject) {
-        await (supabase as any).from("design_projects").update({ name: projectData.name, aspect, zones, updated_at: projectData.updated_at }).eq("id", currentProject.id);
-        setCurrentProject({ ...currentProject, ...projectData });
+        await (supabase as any).from("design_projects").update({ name: projectData.name, aspect, zones: zonesData, updated_at: projectData.updated_at }).eq("id", currentProject.id);
+        setCurrentProject({ ...currentProject, ...projectData, zones: zones, overlays });
         toast.success(t("studioProjectSaved"));
       } else {
         const { data } = await (supabase as any).from("design_projects").insert(projectData).select().single();
-        if (data) { setCurrentProject(data); toast.success(t("studioProjectSaved")); }
+        if (data) { setCurrentProject({ ...data, zones, overlays }); toast.success(t("studioProjectSaved")); }
       }
       loadProjects();
     } catch { toast.error(t("studioProjectSaveFailed")); }
     setSaving(false);
     setShowSaveDialog(false);
-  }, [currentProject, aspect, zones, user, t, loadProjects]);
+  }, [currentProject, aspect, zones, overlays, user, t, loadProjects]);
 
   // Load project
   const handleLoad = useCallback((project: DesignProject) => {
     setCurrentProject(project);
     setAspect(project.aspect as AspectRatio);
-    setZones(project.zones);
+    const allData = project.zones || [];
+    const regularZones = allData.filter((z: any) => !(z as any)._overlay);
+    const overlayData = allData.filter((z: any) => (z as any)._overlay).map((o: any) => { const { _overlay, ...rest } = o; return rest as OverlayBlock; });
+    setZones(regularZones);
+    setOverlays(overlayData);
     setSelectedZone(null);
+    setSelectedOverlay(null);
     setShowLoadDialog(false);
     toast.success(t("studioProjectLoaded"));
   }, [t]);
