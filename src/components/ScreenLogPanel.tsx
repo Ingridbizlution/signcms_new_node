@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader2, Wifi, WifiOff, Settings, CalendarClock, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, Wifi, WifiOff, Settings, CalendarClock, AlertTriangle, RefreshCw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,8 @@ interface ScreenLog {
   event_title: string;
   event_detail: string;
   created_at: string;
+  created_by: string | null;
+  operator_name?: string;
 }
 
 const EVENT_TYPE_CONFIG: Record<string, { icon: typeof Wifi; color: string; label: { zh: string; en: string; ja: string } }> = {
@@ -34,13 +36,20 @@ export function ScreenLogPanel({ screenId }: ScreenLogPanelProps) {
 
   const fetchLogs = async () => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from("screen_logs")
-      .select("id, event_type, event_title, event_detail, created_at")
-      .eq("screen_id", screenId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setLogs(data || []);
+    const [logsRes, profilesRes] = await Promise.all([
+      (supabase as any)
+        .from("screen_logs")
+        .select("id, event_type, event_title, event_detail, created_at, created_by")
+        .eq("screen_id", screenId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      (supabase as any).from("profiles").select("user_id, display_name"),
+    ]);
+    const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p.display_name]));
+    setLogs((logsRes.data || []).map((l: any) => ({
+      ...l,
+      operator_name: l.created_by ? (profileMap.get(l.created_by) || "Unknown") : undefined,
+    })));
     setLoading(false);
   };
 
@@ -97,8 +106,11 @@ export function ScreenLogPanel({ screenId }: ScreenLogPanelProps) {
                   {log.event_detail && (
                     <p className="text-[11px] text-muted-foreground mt-0.5">{log.event_detail}</p>
                   )}
-                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                    {format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-2">
+                    {log.operator_name && (
+                      <span className="flex items-center gap-0.5"><User className="w-2.5 h-2.5" />{log.operator_name}</span>
+                    )}
+                    <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
                   </p>
                 </div>
               </div>

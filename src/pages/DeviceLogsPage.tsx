@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor, RefreshCw, Building2, FileText, Download } from "lucide-react";
+import { Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor, RefreshCw, Building2, FileText, Download, User } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
@@ -20,7 +20,9 @@ interface LogEntry {
   event_title: string;
   event_detail: string;
   created_at: string;
+  created_by: string | null;
   screen_name?: string;
+  operator_name?: string;
 }
 
 const EVENT_TYPE_CONFIG: Record<string, { icon: typeof Wifi; color: string; label: { zh: string; en: string; ja: string } }> = {
@@ -44,12 +46,18 @@ export default function DeviceLogsPage() {
 
   const fetchData = async () => {
     setLoading(true);
-    const [logsRes, screensRes] = await Promise.all([
-      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at").order("created_at", { ascending: false }).limit(200),
+    const [logsRes, screensRes, profilesRes] = await Promise.all([
+      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(200),
       (supabase as any).from("screens").select("id, name"),
+      (supabase as any).from("profiles").select("user_id, display_name"),
     ]);
     const screenMap = new Map((screensRes.data || []).map((s: any) => [s.id, s.name]));
-    const enriched = (logsRes.data || []).map((l: any) => ({ ...l, screen_name: screenMap.get(l.screen_id) || "Unknown" }));
+    const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p.display_name]));
+    const enriched = (logsRes.data || []).map((l: any) => ({
+      ...l,
+      screen_name: screenMap.get(l.screen_id) || "Unknown",
+      operator_name: l.created_by ? (profileMap.get(l.created_by) || "Unknown") : undefined,
+    }));
     setLogs(enriched);
     setScreens(screensRes.data || []);
     setLoading(false);
@@ -82,17 +90,18 @@ export default function DeviceLogsPage() {
   };
 
   const handleExportExcel = () => {
-    const headerMap = { zh: ["時間", "螢幕", "事件類型", "事件標題", "詳細"], en: ["Time", "Screen", "Type", "Title", "Detail"], ja: ["時間", "スクリーン", "タイプ", "タイトル", "詳細"] };
+    const headerMap = { zh: ["時間", "螢幕", "操作者", "事件類型", "事件標題", "詳細"], en: ["Time", "Screen", "Operator", "Type", "Title", "Detail"], ja: ["時間", "スクリーン", "操作者", "タイプ", "タイトル", "詳細"] };
     const headers = headerMap[language];
     const rows = filtered.map(l => [
       format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
       l.screen_name || "",
+      l.operator_name || "-",
       (EVENT_TYPE_CONFIG[l.event_type]?.label[language]) || l.event_type,
       l.event_title,
       l.event_detail,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = [{ wch: 20 }, { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 36 }];
+    ws["!cols"] = [{ wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 36 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, labels.title[language]);
     XLSX.writeFile(wb, `device-logs-${format(new Date(), "yyyyMMdd-HHmm")}.xlsx`);
@@ -186,6 +195,12 @@ export default function DeviceLogsPage() {
                       <Monitor className="w-3 h-3" />
                       {log.screen_name}
                     </span>
+                    {log.operator_name && (
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {log.operator_name}
+                      </span>
+                    )}
                     <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
                   </div>
                 </div>
