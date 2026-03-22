@@ -48,8 +48,9 @@ interface Schedule {
 }
 
 interface ScreenOption { id: string; label: string; }
-interface MediaOption { id: string; name: string; type: "image" | "video"; }
+interface MediaOption { id: string; name: string; type: "image" | "video" | "widget"; }
 interface DesignProjectOption { id: string; name: string; aspect: string; }
+interface WidgetOption { id: string; name: string; }
 
 interface FormPlaylistItem {
   tempId: number;
