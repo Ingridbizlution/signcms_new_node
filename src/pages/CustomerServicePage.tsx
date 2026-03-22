@@ -68,7 +68,7 @@ const CustomerServicePage = () => {
       <div className="h-[calc(100vh-4rem)] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
             <User className="h-5 w-5 text-white" />
           </div>
           <div>
