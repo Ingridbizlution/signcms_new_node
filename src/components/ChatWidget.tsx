@@ -179,7 +179,7 @@ const ChatWidget = () => {
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground" title="語音轉文字">
                 <Mic className="h-4 w-4" />
               </Button>
-              <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleSend} disabled={streaming}>
+              <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleSend} disabled={streaming} title="送出訊息">
                 {streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               </Button>
             </div>
