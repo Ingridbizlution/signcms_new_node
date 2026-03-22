@@ -117,22 +117,22 @@ const TEMPLATES: TemplateItem[] = [
 ];
 
 // ── Carousel Preview ───────────────────────────────────────────────
-function CarouselPreview({ items, interval = 3, transition = "fade" }: { items: MediaItem[]; interval?: number; transition?: CarouselTransition }) {
+function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; transition?: CarouselTransition }) {
   const [idx, setIdx] = useState(0);
   const [prevIdx, setPrevIdx] = useState(0);
   const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     if (items.length <= 1) return;
-    const timer = setInterval(() => {
+    const currentDuration = (items[idx]?.duration || 5) * 1000;
+    const timer = setTimeout(() => {
       setPrevIdx(idx);
       setAnimating(true);
       setIdx((i) => (i + 1) % items.length);
-      const timeout = setTimeout(() => setAnimating(false), 600);
-      return () => clearTimeout(timeout);
-    }, interval * 1000);
-    return () => clearInterval(timer);
-  }, [items.length, interval, idx]);
+      setTimeout(() => setAnimating(false), 600);
+    }, currentDuration);
+    return () => clearTimeout(timer);
+  }, [items.length, idx, items]);
 
   if (items.length === 0) return null;
 
