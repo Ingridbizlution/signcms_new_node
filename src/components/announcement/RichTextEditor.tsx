@@ -58,6 +58,7 @@ const PRESET_COLORS = [
 ];
 
 const RichTextEditor = ({ content, onChange, placeholder, minHeight = "160px" }: RichTextEditorProps) => {
+  const { t } = useLanguage();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
