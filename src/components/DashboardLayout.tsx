@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
-  const { isAdmin } = useUserRole();
+  
   const { t } = useLanguage();
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || t("user");
