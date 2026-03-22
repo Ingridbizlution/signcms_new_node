@@ -627,6 +627,12 @@ const MediaPage = () => {
           )}
           {isAdmin && <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*" onChange={handleUpload} />}
           {isAdmin && (
+            <Button variant="outline" className="gap-2" onClick={() => setWidgetDialogOpen(true)}>
+              <Code2 className="w-4 h-4" />
+              {t("mediaAddWidget")}
+            </Button>
+          )}
+          {isAdmin && (
             <Button className="gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {t("mediaUpload")}
