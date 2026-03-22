@@ -231,7 +231,90 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
     );
   }
 
+  if (config.widgetType === "qrcode") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-lg" style={{ background: bg, color: fg }}>
+        <QRCodeSVG value={config.qrcodeContent || "https://example.com"} size={140} bgColor={bg} fgColor={fg} level="M" />
+        {config.qrcodeContent && <span className="text-[10px] opacity-50 truncate max-w-[80%]">{config.qrcodeContent}</span>}
+      </div>
+    );
+  }
+
+  if (config.widgetType === "countdown") {
+    const target = config.targetDate ? new Date(config.targetDate).getTime() : Date.now() + 86400000;
+    const diff = Math.max(0, target - now.getTime());
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 rounded-lg" style={{ background: bg, color: fg }}>
+        {config.countdownTitle && <span className="text-lg font-bold opacity-80">{config.countdownTitle}</span>}
+        <div className="flex gap-4">
+          {[{ v: days, l: "天" }, { v: hours, l: "時" }, { v: mins, l: "分" }, { v: secs, l: "秒" }].map(({ v, l }) => (
+            <div key={l} className="flex flex-col items-center">
+              <span className="text-4xl font-mono font-bold">{String(v).padStart(2, "0")}</span>
+              <span className="text-xs opacity-50">{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (config.widgetType === "youtube") {
+    const videoId = extractYoutubeId(config.youtubeUrl || "");
+    return (
+      <div className="w-full h-full rounded-lg overflow-hidden" style={{ background: bg }}>
+        {videoId ? (
+          <iframe src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}`} className="w-full h-full border-0" allow="autoplay; encrypted-media" allowFullScreen title="YouTube" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ color: fg }}>
+            <Youtube className="w-10 h-10 opacity-30" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (config.widgetType === "weather") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-lg" style={{ background: bg, color: fg }}>
+        <CloudSun className="w-16 h-16 opacity-60" />
+        <span className="text-lg font-bold">{config.city || "City"}</span>
+        <WeatherDisplay city={config.city || "Taipei"} fg={fg} />
+      </div>
+    );
+  }
+
   return null;
+}
+
+function extractYoutubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+function WeatherDisplay({ city, fg }: { city: string; fg: string }) {
+  const [weather, setWeather] = useState<{ temp: string; desc: string } | null>(null);
+
+  useEffect(() => {
+    fetch(`https://wttr.in/${encodeURIComponent(city)}?format=%t|%C&lang=zh`)
+      .then(r => r.text())
+      .then(text => {
+        const [temp, desc] = text.split("|");
+        setWeather({ temp: temp?.trim() || "--", desc: desc?.trim() || "" });
+      })
+      .catch(() => setWeather({ temp: "--", desc: "" }));
+  }, [city]);
+
+  if (!weather) return <span className="text-xs opacity-40">Loading...</span>;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span className="text-3xl font-bold">{weather.temp}</span>
+      <span className="text-sm opacity-60">{weather.desc}</span>
+    </div>
+  );
 }
 
 export default function MediaPage() {
