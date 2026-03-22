@@ -45,6 +45,7 @@ interface Screen {
   connection_type?: string;
   avg_upload_speed?: string;
   avg_download_speed?: string;
+  firmware_version?: string;
 }
 
 const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080", org_id: "", serial_number: "", ip_address: "", connection_type: "wired", avg_upload_speed: "", avg_download_speed: "" };
