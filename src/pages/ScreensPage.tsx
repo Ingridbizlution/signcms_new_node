@@ -442,15 +442,15 @@ export default function ScreensPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`}>
+                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`} title="群組">
                     <Layers className="w-3 h-3" />{screen.branch || t("screensUngrouped")}
                   </span>
-                  {screen.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{screen.location}</span>}
-                  <span>{screen.resolution}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]">SN: {screen.serial_number || "—"}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]">IP: {screen.ip_address || "—"}</span>
+                  {screen.location && <span className="flex items-center gap-1" title="位置"><MapPin className="w-3 h-3" />{screen.location}</span>}
+                  <span title="解析度">{screen.resolution}</span>
+                  <span className="flex items-center gap-1 font-mono text-[11px]" title="序號">SN: {screen.serial_number || "—"}</span>
+                  <span className="flex items-center gap-1 font-mono text-[11px]" title="網路 IP 位址">IP: {screen.ip_address || "—"}</span>
                   {screen.connection_type && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" title="連線方式">
                       {screen.connection_type === "wired" ? <Cable className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
                       {screen.connection_type === "wired" ? "有線" : "無線"}
                     </span>
@@ -469,7 +469,7 @@ export default function ScreensPage() {
                     const isWarning = hasData && (isUpLow || isDownLow);
 
                     return (
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
+                      <span title={`網路速度健康狀態（閾值：上傳 ${uploadThreshold} Mbps / 下載 ${downloadThreshold} Mbps）`} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
                         !hasData
                           ? "bg-muted text-muted-foreground"
                           : isWarning
