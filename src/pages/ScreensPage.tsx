@@ -468,6 +468,36 @@ export default function ScreensPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>序號 (Serial Number)</Label>
+              <Input value={form.serial_number} onChange={(e) => setForm({ ...form, serial_number: e.target.value })} placeholder="例如：SN-2024-001" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>網路 IP</Label>
+                <Input value={form.ip_address} onChange={(e) => setForm({ ...form, ip_address: e.target.value })} placeholder="192.168.1.100" />
+              </div>
+              <div className="space-y-2">
+                <Label>連線方式</Label>
+                <Select value={form.connection_type} onValueChange={(v) => setForm({ ...form, connection_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="wired">🔌 有線連接</SelectItem>
+                    <SelectItem value="wireless">📶 無線連接</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>平均上傳速率</Label>
+                <Input value={form.avg_upload_speed} onChange={(e) => setForm({ ...form, avg_upload_speed: e.target.value })} placeholder="例如：50 Mbps" />
+              </div>
+              <div className="space-y-2">
+                <Label>平均下載速率</Label>
+                <Input value={form.avg_download_speed} onChange={(e) => setForm({ ...form, avg_download_speed: e.target.value })} placeholder="例如：100 Mbps" />
+              </div>
+            </div>
             {orgs.length > 0 && (
               <div className="space-y-2">
                 <Label>{t("teamOrg")}</Label>
