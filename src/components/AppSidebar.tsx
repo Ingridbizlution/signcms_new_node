@@ -1,6 +1,7 @@
-import { LayoutDashboard, Monitor, Image, CalendarClock } from "lucide-react";
+import { LayoutDashboard, Monitor, Image, CalendarClock, ShieldCheck } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Sidebar,
   SidebarContent,
@@ -13,10 +14,11 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "總覽儀表板", url: "/", icon: LayoutDashboard },
-  { title: "螢幕管理", url: "/screens", icon: Monitor },
-  { title: "廣告素材庫", url: "/media", icon: Image },
-  { title: "播放清單排程", url: "/schedules", icon: CalendarClock },
+  { title: "總覽儀表板", url: "/", icon: LayoutDashboard, adminOnly: false },
+  { title: "螢幕管理", url: "/screens", icon: Monitor, adminOnly: false },
+  { title: "廣告素材庫", url: "/media", icon: Image, adminOnly: false },
+  { title: "播放清單排程", url: "/schedules", icon: CalendarClock, adminOnly: false },
+  { title: "使用者管理", url: "/admin", icon: ShieldCheck, adminOnly: true },
 ];
 
 export function AppSidebar() {
