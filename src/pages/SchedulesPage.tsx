@@ -124,7 +124,7 @@ export default function SchedulesPage() {
       .select("id, schedule_id, media_id, design_project_id, item_type, sort_order, duration")
       .order("sort_order");
 
-    const mediaMap = new Map((mediaData || []).map((m: any) => [m.id, m]));
+    const mediaMap = new Map(allMedia.map((m: any) => [m.id, m]));
     const designMap = new Map((designData || []).map((d: any) => [d.id, d]));
     const screenMap = new Map(opts.map((s) => [s.id, s.label]));
 
@@ -142,10 +142,11 @@ export default function SchedulesPage() {
             };
           }
           const m = mediaMap.get(i.media_id) as any;
+          const isWidget = m?.type === "widget";
           return {
             id: i.id, media_id: i.media_id, design_project_id: null,
-            item_type: "media" as PlaylistItemType,
-            item_name: m?.name || "Unknown", item_sub_type: (m?.type || "image") as "image" | "video",
+            item_type: (isWidget ? "widget" : "media") as PlaylistItemType,
+            item_name: m?.name || "Unknown", item_sub_type: (isWidget ? "widget" : (m?.type || "image")) as "image" | "video" | "widget",
             duration: i.duration, sort_order: i.sort_order,
           };
         });
