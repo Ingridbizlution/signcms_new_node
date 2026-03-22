@@ -52,6 +52,7 @@ const App = () => (
                   <Route path="/app-store" element={<ProtectedRoute><AppStore /></ProtectedRoute>} />
                   <Route path="/announcement" element={<ProtectedRoute><Announcement /></ProtectedRoute>} />
                   <Route path="/queue" element={<ProtectedRoute><Queue /></ProtectedRoute>} />
+                  <Route path="/meeting-room" element={<ProtectedRoute><MeetingRoom /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
