@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Image, Upload, Trash2, Search, Grid3X3, List, Eye, FileImage, FileVideo, Clock, HardDrive, Loader2,
-  Code2, Calendar, Globe, Type, Plus, CloudSun, QrCode, Timer, Youtube, FolderOpen,
+  Code2, Calendar, Globe, Type, Plus, CloudSun, QrCode, Timer, Youtube, FolderOpen, Pencil, FolderPlus, Settings2,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -371,6 +371,11 @@ export default function MediaPage() {
   const [projects, setProjects] = useState<DesignProject[]>([]);
   const [projectFilter, setProjectFilter] = useState("all");
   const [uploadProjectId, setUploadProjectId] = useState<string>("__none__");
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [editingProject, setEditingProject] = useState<DesignProject | null>(null);
+  const [editProjectName, setEditProjectName] = useState("");
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Widget form state — text color defaults to theme-aware
@@ -413,6 +418,27 @@ export default function MediaPage() {
   const fetchProjects = async () => {
     const { data } = await (supabase as any).from("design_projects").select("id, name").order("name");
     setProjects(data || []);
+  };
+
+  const handleCreateProject = async () => {
+    if (!newProjectName.trim()) return;
+    const { error } = await (supabase as any).from("design_projects").insert({ name: newProjectName.trim(), created_by: user?.id });
+    if (error) toast.error(error.message);
+    else { toast.success(t("mediaProjectCreated")); setNewProjectName(""); fetchProjects(); }
+  };
+
+  const handleUpdateProject = async () => {
+    if (!editingProject || !editProjectName.trim()) return;
+    const { error } = await (supabase as any).from("design_projects").update({ name: editProjectName.trim() }).eq("id", editingProject.id);
+    if (error) toast.error(error.message);
+    else { toast.success(t("mediaProjectUpdated")); setEditingProject(null); setEditProjectName(""); fetchProjects(); }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!deleteProjectId) return;
+    const { error } = await (supabase as any).from("design_projects").delete().eq("id", deleteProjectId);
+    if (error) toast.error(error.message);
+    else { toast.success(t("mediaProjectDeleted")); setDeleteProjectId(null); fetchProjects(); fetchMedia(); }
   };
 
   useEffect(() => { fetchMedia(); fetchProjects(); }, []);
@@ -641,6 +667,11 @@ export default function MediaPage() {
             ))}
           </SelectContent>
         </Select>
+        {isAdmin && (
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setProjectDialogOpen(true)} title={t("mediaManageProjects")}>
+            <Settings2 className="w-4 h-4" />
+          </Button>
+        )}
         <div className="flex border border-border rounded-lg overflow-hidden">
           <Button variant={viewMode === "grid" ? "default" : "ghost"} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode("grid")}><Grid3X3 className="w-4 h-4" /></Button>
           <Button variant={viewMode === "list" ? "default" : "ghost"} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode("list")}><List className="w-4 h-4" /></Button>
@@ -1100,6 +1131,82 @@ export default function MediaPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("confirmDelete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Project Management Dialog */}
+      <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FolderOpen className="w-5 h-5 text-primary" />{t("mediaManageProjects")}</DialogTitle>
+            <DialogDescription className="sr-only">{t("mediaManageProjects")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Add new project */}
+            <div className="flex gap-2">
+              <Input
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder={t("mediaProjectNamePlaceholder")}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
+              />
+              <Button onClick={handleCreateProject} disabled={!newProjectName.trim()} size="icon" className="shrink-0">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Project list */}
+            <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+              {projects.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">{t("mediaNoProject")}</p>
+              )}
+              {projects.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 group">
+                  {editingProject?.id === p.id ? (
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={editProjectName}
+                        onChange={(e) => setEditProjectName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleUpdateProject(); if (e.key === "Escape") setEditingProject(null); }}
+                        autoFocus
+                        className="h-8"
+                      />
+                      <Button size="sm" onClick={handleUpdateProject} disabled={!editProjectName.trim()} className="h-8">{t("save")}</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingProject(null)} className="h-8">{t("cancel")}</Button>
+                    </div>
+                  ) : (
+                    <>
+                      <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="flex-1 text-sm text-foreground truncate">{p.name}</span>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {media.filter((m) => m.design_project_id === p.id).length}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingProject(p); setEditProjectName(p.name); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive" onClick={() => setDeleteProjectId(p.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Project Confirm */}
+      <AlertDialog open={deleteProjectId !== null} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("mediaDeleteConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("mediaProjectDeleteConfirm")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("confirmDelete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
