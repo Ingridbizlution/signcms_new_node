@@ -41,6 +41,8 @@ interface WidgetConfig {
   countdownTitle?: string;
   youtubeUrl?: string;
   city?: string;
+  fontSize?: "small" | "medium" | "large" | "xlarge";
+  qrcodeSize?: number;
 }
 
 interface MediaItem {

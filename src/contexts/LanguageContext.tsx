@@ -160,6 +160,12 @@ const translations = {
   widgetHours: { zh: "時", en: "hrs", ja: "時間" },
   widgetMinutes: { zh: "分", en: "min", ja: "分" },
   widgetSeconds: { zh: "秒", en: "sec", ja: "秒" },
+  widgetFontSize: { zh: "字體大小", en: "Font Size", ja: "フォントサイズ" },
+  widgetFontSizeSmall: { zh: "小", en: "Small", ja: "小" },
+  widgetFontSizeMedium: { zh: "中", en: "Medium", ja: "中" },
+  widgetFontSizeLarge: { zh: "大", en: "Large", ja: "大" },
+  widgetFontSizeXLarge: { zh: "特大", en: "Extra Large", ja: "特大" },
+  widgetQrcodeSize: { zh: "QR Code 大小", en: "QR Code Size", ja: "QRコードサイズ" },
 
   // Schedules
   schedTitle: { zh: "播放清單排程", en: "Playlist Schedules", ja: "プレイリストスケジュール" },
