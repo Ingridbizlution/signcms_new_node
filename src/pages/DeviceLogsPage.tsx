@@ -540,9 +540,51 @@ export default function SystemLogsPage() {
 
         {/* ===== Playback Reports Tab ===== */}
         <TabsContent value="playback" className="space-y-6 mt-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <Select value={playbackFilterScreen} onValueChange={setPlaybackFilterScreen}>
+              <SelectTrigger className="w-[180px]">
+                <Monitor className="w-4 h-4 mr-2 text-muted-foreground" /><SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{{ zh: "所有螢幕", en: "All Screens", ja: "全スクリーン" }[language]}</SelectItem>
+                {screens.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal", !playbackStartDate && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {playbackStartDate ? format(playbackStartDate, "yyyy-MM-dd") : <span>{{ zh: "起始日期", en: "Start date", ja: "開始日" }[language]}</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={playbackStartDate} onSelect={setPlaybackStartDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            <span className="text-muted-foreground text-sm">~</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className={cn("w-[150px] justify-start text-left font-normal", !playbackEndDate && "text-muted-foreground")}>
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {playbackEndDate ? format(playbackEndDate, "yyyy-MM-dd") : <span>{{ zh: "結束日期", en: "End date", ja: "終了日" }[language]}</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={playbackEndDate} onSelect={setPlaybackEndDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+              </PopoverContent>
+            </Popover>
+            {(playbackStartDate || playbackEndDate || playbackFilterScreen !== "all") && (
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={() => { setPlaybackFilterScreen("all"); setPlaybackStartDate(undefined); setPlaybackEndDate(undefined); }}>
+                <X className="w-3.5 h-3.5" />{{ zh: "清除篩選", en: "Clear", ja: "クリア" }[language]}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{{ zh: `共 ${filteredPlayback.length} 筆播放紀錄`, en: `${filteredPlayback.length} playback records`, ja: `${filteredPlayback.length} 件の再生記録` }[language]}</p>
+
           {playbackLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-          ) : playbackLogs.length === 0 ? (
+          ) : filteredPlayback.length === 0 ? (
             <Card className="p-12 text-center text-muted-foreground"><BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{{ zh: "暫無播放紀錄", en: "No playback data", ja: "再生データなし" }[language]}</p></Card>
           ) : (
             <>
