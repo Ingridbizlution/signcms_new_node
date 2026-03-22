@@ -225,7 +225,7 @@ const AnnouncementPage = () => {
 
   const saveEditing = () => {
     if (!editingAnnouncement) return;
-    if (!editSubject.trim() || !editContent.trim() || !editStartDate || !editEndDate) {
+    if (!editSubject.trim() || !editContent || editContent === "<p></p>" || !editStartDate || !editEndDate) {
       toast.error(t("errorFill"));
       return;
     }
