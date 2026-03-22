@@ -709,26 +709,28 @@ export default function MediaPage() {
                       {item.type !== "widget" && <><span>·</span><span>{item.dimensions}</span></>}
                       <span>·</span>
                       {isAdmin ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <button className="flex items-center gap-0.5 hover:text-foreground transition-colors">
-                              <FolderOpen className="w-3 h-3" />
-                              <span>{(() => { const p = projects.find(pr => pr.id === item.design_project_id); return p ? p.name : t("mediaNoProject"); })()}</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuLabel className="text-xs">{t("mediaProjectGroup")}</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleChangeProject(item.id, null); }} className={!item.design_project_id ? "bg-accent" : ""}>
-                              {t("mediaNoProject")}
-                            </DropdownMenuItem>
-                            {projects.map((p) => (
-                              <DropdownMenuItem key={p.id} onSelect={(e) => { e.preventDefault(); handleChangeProject(item.id, p.id); }} className={item.design_project_id === p.id ? "bg-accent" : ""}>
-                                {p.name}
+                        <div onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="flex items-center gap-0.5 hover:text-foreground transition-colors">
+                                <FolderOpen className="w-3 h-3" />
+                                <span>{(() => { const p = projects.find(pr => pr.id === item.design_project_id); return p ? p.name : t("mediaNoProject"); })()}</span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuLabel className="text-xs">{t("mediaProjectGroup")}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => handleChangeProject(item.id, null)} className={!item.design_project_id ? "bg-accent" : ""}>
+                                {t("mediaNoProject")}
                               </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {projects.map((p) => (
+                                <DropdownMenuItem key={p.id} onSelect={() => handleChangeProject(item.id, p.id)} className={item.design_project_id === p.id ? "bg-accent" : ""}>
+                                  {p.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       ) : (
                         <span className="flex items-center gap-0.5"><FolderOpen className="w-3 h-3" />{(() => { const p = projects.find(pr => pr.id === item.design_project_id); return p ? p.name : t("mediaNoProject"); })()}</span>
                       )}
