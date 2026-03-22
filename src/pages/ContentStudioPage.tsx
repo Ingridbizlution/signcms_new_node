@@ -552,7 +552,9 @@ export default function ContentStudioPage() {
   const { user } = useAuth();
   const [aspect, setAspect] = useState<AspectRatio>("16:9");
   const [zones, setZones] = useState<Zone[]>(LAYOUT_PRESETS[0].zones.map((z) => ({ ...z })));
+  const [overlays, setOverlays] = useState<OverlayBlock[]>([]);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [selectedOverlay, setSelectedOverlay] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<string>("layouts");
 
   // Project state
