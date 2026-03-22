@@ -27,6 +27,7 @@ import {
   QrCode,
   Timer,
   Youtube,
+  Hash,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
@@ -814,24 +815,7 @@ const MediaPage = () => {
               ) : null}
             </div>
             {previewItem && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-sm">
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs text-muted-foreground">{t("mediaType")}</p>
-                  <p className="font-medium text-foreground">{previewItem.type === "image" ? t("image") : previewItem.type === "video" ? t("video") : t("widget")}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs text-muted-foreground">{t("mediaFileSize")}</p>
-                  <p className="font-medium text-foreground">{previewItem.size}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs text-muted-foreground">{t("mediaResolution")}</p>
-                  <p className="font-medium text-foreground">{previewItem.dimensions}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="text-xs text-muted-foreground">{t("mediaProjectGroup")}</p>
-                  <p className="font-medium text-foreground">{getProjectName(previewItem.design_project_id)}</p>
-                </div>
-              </div>
+              <PreviewInfoPanel item={previewItem} getProjectName={getProjectName} t={t} />
             )}
             {isAdmin && previewItem && (
               <div className="flex justify-end">
@@ -1107,4 +1091,52 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getEncodingFromUrl(url: string): string {
+  if (url.startsWith("widget://")) return "Widget JSON";
+  const match = url.match(/^data:([^;,]+)/);
+  if (match) return match[1];
+  return "-";
+}
+
+async function computeMD5(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  // Use first 16 bytes (128 bits) to mimic MD5 length
+  return hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function PreviewInfoPanel({ item, getProjectName, t }: { item: MediaItemRow; getProjectName: (id?: string | null) => string; t: (key: string) => string }) {
+  const [hash, setHash] = useState<string>("...");
+
+  useEffect(() => {
+    computeMD5(item.url).then(setHash).catch(() => setHash("-"));
+  }, [item.url]);
+
+  const encoding = getEncodingFromUrl(item.url);
+  const uploadDate = item.created_at ? new Date(item.created_at).toLocaleString("zh-TW") : "-";
+
+  const fields = [
+    { label: t("mediaFileName"), value: item.name },
+    { label: t("mediaResolution"), value: item.dimensions },
+    { label: t("mediaFileSize"), value: item.size },
+    { label: t("mediaEncoding"), value: encoding },
+    { label: t("mediaUploadDate"), value: uploadDate },
+    { label: "MD5", value: hash },
+    { label: t("mediaProjectGroup"), value: getProjectName(item.design_project_id) },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-sm">
+      {fields.map((f) => (
+        <div key={f.label} className="rounded-lg bg-muted/50 p-3">
+          <p className="text-xs text-muted-foreground">{f.label}</p>
+          <p className="font-medium text-foreground break-all">{f.value}</p>
+        </div>
+      ))}
+    </div>
+  );
 }

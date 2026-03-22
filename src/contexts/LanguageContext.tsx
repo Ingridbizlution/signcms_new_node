@@ -108,6 +108,8 @@ const translations = {
   mediaDeleteDesc: { zh: "刪除後將無法復原，使用此素材的播放清單也會受到影響。", en: "This cannot be undone. Playlists using this media will be affected.", ja: "この操作は取り消せません。このメディアを使用するプレイリストに影響します。" },
   mediaType: { zh: "類型", en: "Type", ja: "タイプ" },
   mediaFileSize: { zh: "檔案大小", en: "File Size", ja: "ファイルサイズ" },
+  mediaFileName: { zh: "檔案名稱", en: "File Name", ja: "ファイル名" },
+  mediaEncoding: { zh: "編碼格式", en: "Encoding", ja: "エンコード" },
   mediaResolution: { zh: "解析度", en: "Resolution", ja: "解像度" },
   mediaDuration: { zh: "時長", en: "Duration", ja: "再生時間" },
   mediaUploadDate: { zh: "上傳日期", en: "Upload Date", ja: "アップロード日" },
