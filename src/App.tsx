@@ -12,6 +12,7 @@ import Admin from "./pages/Admin.tsx";
 import Screens from "./pages/Screens.tsx";
 import Media from "./pages/Media.tsx";
 import Schedules from "./pages/Schedules.tsx";
+import Publishing from "./pages/Publishing.tsx";
 import ContentStudio from "./pages/ContentStudio.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
@@ -39,6 +40,7 @@ const App = () => (
                 <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
                 <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
                 <Route path="/studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
+                <Route path="/publishing" element={<ProtectedRoute><Publishing /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
