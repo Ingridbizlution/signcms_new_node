@@ -618,6 +618,24 @@ export default function ContentStudioPage() {
     if (selectedOverlay === id) setSelectedOverlay(null);
   }, [selectedOverlay]);
 
+  const moveOverlayLayer = useCallback((id: string, direction: "up" | "down") => {
+    setOverlays((prev) => {
+      const sorted = [...prev].sort((a, b) => a.zIndex - b.zIndex);
+      const idx = sorted.findIndex((o) => o.id === id);
+      if (direction === "up" && idx < sorted.length - 1) {
+        const swapId = sorted[idx + 1].id;
+        const myZ = sorted[idx].zIndex, otherZ = sorted[idx + 1].zIndex;
+        return prev.map((o) => o.id === id ? { ...o, zIndex: otherZ } : o.id === swapId ? { ...o, zIndex: myZ } : o);
+      }
+      if (direction === "down" && idx > 0) {
+        const swapId = sorted[idx - 1].id;
+        const myZ = sorted[idx].zIndex, otherZ = sorted[idx - 1].zIndex;
+        return prev.map((o) => o.id === id ? { ...o, zIndex: otherZ } : o.id === swapId ? { ...o, zIndex: myZ } : o);
+      }
+      return prev;
+    });
+  }, []);
+
   // Save project
   const handleSave = useCallback(async (name?: string) => {
     setSaving(true);
