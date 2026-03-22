@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 type MediaType = "image" | "video" | "widget";
 
@@ -475,6 +476,7 @@ const MediaPage = () => {
         toast.error(result.error || t("mediaUnsupported"));
       } else {
         toast.success(`${t("mediaUploaded")}：${file.name}`);
+        logActivity({ action: "上傳素材", category: "media", targetName: file.name });
         fetchMedia();
       }
     } catch (error) {
@@ -537,6 +539,7 @@ const MediaPage = () => {
       toast.error(error.message);
     } else {
       toast.success(`${t("mediaDeleted")}：${item?.name || ""}`);
+      logActivity({ action: "刪除素材", category: "media", targetName: item?.name || "", targetId: deleteId });
       setDeleteId(null);
       setDeleteUsage(null);
       if (previewItem?.id === deleteId) setPreviewItem(null);

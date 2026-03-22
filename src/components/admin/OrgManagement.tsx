@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Building2, Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface Org {
   id: string;
@@ -63,10 +64,10 @@ export default function OrgManagement() {
     setSaving(true);
     if (editOrg) {
       const { error } = await supabase.from("organizations").update({ name: name.trim(), description: description.trim() }).eq("id", editOrg.id);
-      if (error) toast.error(error.message); else { toast.success(t("orgUpdated")); fetchOrgs(); }
+      if (error) toast.error(error.message); else { toast.success(t("orgUpdated")); logActivity({ action: "編輯組織", category: "admin", targetName: name.trim(), targetId: editOrg.id }); fetchOrgs(); }
     } else {
       const { error } = await supabase.from("organizations").insert({ name: name.trim(), description: description.trim() });
-      if (error) toast.error(error.message); else { toast.success(t("orgCreated")); fetchOrgs(); }
+      if (error) toast.error(error.message); else { toast.success(t("orgCreated")); logActivity({ action: "新增組織", category: "admin", targetName: name.trim() }); fetchOrgs(); }
     }
     setSaving(false);
     setDialogOpen(false);
@@ -75,7 +76,7 @@ export default function OrgManagement() {
   const handleDelete = async () => {
     if (!deleteDialog) return;
     const { error } = await supabase.from("organizations").delete().eq("id", deleteDialog.id);
-    if (error) toast.error(error.message); else { toast.success(t("orgDeleted")); fetchOrgs(); }
+    if (error) toast.error(error.message); else { toast.success(t("orgDeleted")); logActivity({ action: "刪除組織", category: "admin", targetName: deleteDialog.name, targetId: deleteDialog.id }); fetchOrgs(); }
     setDeleteDialog(null);
   };
 

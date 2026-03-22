@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          category: string
+          created_at: string
+          detail: string | null
+          id: string
+          org_id: string | null
+          target_id: string | null
+          target_name: string | null
+          target_type: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          category?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          org_id?: string | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          category?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          org_id?: string | null
+          target_id?: string | null
+          target_name?: string | null
+          target_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_projects: {
         Row: {
           aspect: string

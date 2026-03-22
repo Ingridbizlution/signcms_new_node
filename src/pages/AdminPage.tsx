@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, ShieldCheck, Users, AlertTriangle, Loader2, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import OrgManagement from "@/components/admin/OrgManagement";
 import TeamManagement from "@/components/admin/TeamManagement";
@@ -46,7 +47,7 @@ export default function AdminPage() {
     await supabase.from("user_roles").delete().eq("user_id", user.user_id);
     const { error } = await supabase.from("user_roles").insert({ user_id: user.user_id, role: newRole });
     if (error) { toast.error(`${t("adminRoleUpdateFailed")}：${error.message}`); }
-    else { toast.success(t("adminRoleUpdated")); fetchUsers(); }
+    else { toast.success(t("adminRoleUpdated")); logActivity({ action: "變更角色", category: "admin", targetName: user.display_name || "", detail: `→ ${newRole}` }); fetchUsers(); }
     setSaving(false); setChangeDialog(null);
   };
 

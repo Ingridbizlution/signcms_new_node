@@ -8,11 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor, RefreshCw, Building2, FileText, Download, User } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor,
+  RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
+  Trash2, Send, ShieldCheck, Image, Brush,
+} from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 
-interface LogEntry {
+// --- Device log types ---
+interface DeviceLog {
   id: string;
   screen_id: string;
   org_id: string | null;
@@ -25,62 +31,133 @@ interface LogEntry {
   operator_name?: string;
 }
 
-const EVENT_TYPE_CONFIG: Record<string, { icon: typeof Wifi; color: string; label: { zh: string; en: string; ja: string } }> = {
+const DEVICE_TYPE_CONFIG: Record<string, { icon: typeof Wifi; color: string; label: { zh: string; en: string; ja: string } }> = {
   status: { icon: Wifi, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400", label: { zh: "狀態變更", en: "Status", ja: "ステータス" } },
   config: { icon: Settings, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400", label: { zh: "設定變更", en: "Config", ja: "設定変更" } },
   schedule: { icon: CalendarClock, color: "bg-green-500/10 text-green-600 dark:text-green-400", label: { zh: "排程播放", en: "Schedule", ja: "スケジュール" } },
   system: { icon: AlertTriangle, color: "bg-purple-500/10 text-purple-600 dark:text-purple-400", label: { zh: "系統事件", en: "System", ja: "システム" } },
 };
 
-export default function DeviceLogsPage() {
+// --- Activity log types ---
+interface ActivityLog {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  action: string;
+  category: string;
+  target_type: string;
+  target_id: string;
+  target_name: string;
+  detail: string;
+  created_at: string;
+  user_name?: string;
+}
+
+const ACTIVITY_CATEGORY_CONFIG: Record<string, { icon: typeof User; color: string; label: { zh: string; en: string; ja: string } }> = {
+  auth: { icon: LogIn, color: "bg-sky-500/10 text-sky-600 dark:text-sky-400", label: { zh: "登入/登出", en: "Auth", ja: "認証" } },
+  screen: { icon: Monitor, color: "bg-blue-500/10 text-blue-600 dark:text-blue-400", label: { zh: "螢幕管理", en: "Screen", ja: "スクリーン" } },
+  media: { icon: Image, color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", label: { zh: "素材管理", en: "Media", ja: "メディア" } },
+  schedule: { icon: CalendarClock, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400", label: { zh: "排程管理", en: "Schedule", ja: "スケジュール" } },
+  publish: { icon: Send, color: "bg-green-500/10 text-green-600 dark:text-green-400", label: { zh: "發佈操作", en: "Publish", ja: "配信" } },
+  admin: { icon: ShieldCheck, color: "bg-red-500/10 text-red-600 dark:text-red-400", label: { zh: "管理操作", en: "Admin", ja: "管理" } },
+  studio: { icon: Brush, color: "bg-violet-500/10 text-violet-600 dark:text-violet-400", label: { zh: "內容設計", en: "Studio", ja: "スタジオ" } },
+};
+
+export default function SystemLogsPage() {
   const { language } = useLanguage();
   const { isAdmin } = useUserRole();
   const { orgs } = useUserOrgs();
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [screens, setScreens] = useState<{ id: string; name: string }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterScreen, setFilterScreen] = useState("all");
-  const [filterOrgId, setFilterOrgId] = useState("all");
+  const [activeTab, setActiveTab] = useState("device");
 
-  const fetchData = async () => {
-    setLoading(true);
-    const [logsRes, screensRes, profilesRes] = await Promise.all([
-      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(200),
-      (supabase as any).from("screens").select("id, name"),
-      (supabase as any).from("profiles").select("user_id, display_name"),
-    ]);
-    const screenMap = new Map((screensRes.data || []).map((s: any) => [s.id, s.name]));
-    const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p.display_name]));
-    const enriched = (logsRes.data || []).map((l: any) => ({
-      ...l,
-      screen_name: screenMap.get(l.screen_id) || "Unknown",
-      operator_name: l.created_by ? (profileMap.get(l.created_by) || "Unknown") : undefined,
-    }));
-    setLogs(enriched);
-    setScreens(screensRes.data || []);
-    setLoading(false);
+  // --- Device logs state ---
+  const [deviceLogs, setDeviceLogs] = useState<DeviceLog[]>([]);
+  const [screens, setScreens] = useState<{ id: string; name: string }[]>([]);
+  const [deviceLoading, setDeviceLoading] = useState(true);
+  const [deviceSearch, setDeviceSearch] = useState("");
+  const [deviceFilterType, setDeviceFilterType] = useState("all");
+  const [deviceFilterScreen, setDeviceFilterScreen] = useState("all");
+  const [deviceFilterOrg, setDeviceFilterOrg] = useState("all");
+
+  // --- Activity logs state ---
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityFilterCategory, setActivityFilterCategory] = useState("all");
+  const [activityFilterOrg, setActivityFilterOrg] = useState("all");
+
+  // --- Shared ---
+  const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
+
+  const fetchProfiles = async (): Promise<Map<string, string>> => {
+    const { data } = await (supabase as any).from("profiles").select("user_id, display_name");
+    return new Map<string, string>((data || []).map((p: any) => [p.user_id, p.display_name]));
   };
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchDeviceLogs = async (pMap: Map<string, string>) => {
+    setDeviceLoading(true);
+    const [logsRes, screensRes] = await Promise.all([
+      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(200),
+      (supabase as any).from("screens").select("id, name"),
+    ]);
+    const sMap = new Map((screensRes.data || []).map((s: any) => [s.id, s.name]));
+    setDeviceLogs((logsRes.data || []).map((l: any) => ({
+      ...l,
+      screen_name: sMap.get(l.screen_id) || "Unknown",
+      operator_name: l.created_by ? (pMap.get(l.created_by) || "Unknown") : undefined,
+    })));
+    setScreens(screensRes.data || []);
+    setDeviceLoading(false);
+  };
 
-  const filtered = useMemo(() => {
-    return logs.filter(l => {
-      if (filterType !== "all" && l.event_type !== filterType) return false;
-      if (filterScreen !== "all" && l.screen_id !== filterScreen) return false;
-      if (filterOrgId === "none" && l.org_id) return false;
-      if (filterOrgId !== "all" && filterOrgId !== "none" && l.org_id !== filterOrgId) return false;
-      if (search && !l.event_title.includes(search) && !l.event_detail.includes(search) && !(l.screen_name || "").includes(search)) return false;
+  const fetchActivityLogs = async (pMap: Map<string, string>) => {
+    setActivityLoading(true);
+    const { data } = await (supabase as any).from("activity_logs").select("*").order("created_at", { ascending: false }).limit(200);
+    setActivityLogs((data || []).map((l: any) => ({
+      ...l,
+      user_name: pMap.get(l.user_id) || "Unknown",
+    })));
+    setActivityLoading(false);
+  };
+
+  const fetchAll = async () => {
+    const pMap = await fetchProfiles();
+    setProfileMap(pMap);
+    await Promise.all([fetchDeviceLogs(pMap), fetchActivityLogs(pMap)]);
+  };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  // --- Device filters ---
+  const filteredDevice = useMemo(() => {
+    return deviceLogs.filter(l => {
+      if (deviceFilterType !== "all" && l.event_type !== deviceFilterType) return false;
+      if (deviceFilterScreen !== "all" && l.screen_id !== deviceFilterScreen) return false;
+      if (deviceFilterOrg === "none" && l.org_id) return false;
+      if (deviceFilterOrg !== "all" && deviceFilterOrg !== "none" && l.org_id !== deviceFilterOrg) return false;
+      if (deviceSearch && !l.event_title.includes(deviceSearch) && !l.event_detail.includes(deviceSearch) && !(l.screen_name || "").includes(deviceSearch)) return false;
       return true;
     });
-  }, [logs, filterType, filterScreen, filterOrgId, search]);
+  }, [deviceLogs, deviceFilterType, deviceFilterScreen, deviceFilterOrg, deviceSearch]);
+
+  // --- Activity filters ---
+  const filteredActivity = useMemo(() => {
+    return activityLogs.filter(l => {
+      if (activityFilterCategory !== "all" && l.category !== activityFilterCategory) return false;
+      if (activityFilterOrg === "none" && l.org_id) return false;
+      if (activityFilterOrg !== "all" && activityFilterOrg !== "none" && l.org_id !== activityFilterOrg) return false;
+      if (activitySearch && !l.action.includes(activitySearch) && !l.target_name.includes(activitySearch) && !l.detail.includes(activitySearch) && !(l.user_name || "").includes(activitySearch)) return false;
+      return true;
+    });
+  }, [activityLogs, activityFilterCategory, activityFilterOrg, activitySearch]);
 
   const labels = {
-    title: { zh: "設備狀態紀錄", en: "Device Logs", ja: "デバイスログ" },
-    subtitle: { zh: "查看所有設備的狀態變更與事件紀錄", en: "View status changes and event logs for all devices", ja: "全デバイスのステータス変更とイベントログを表示" },
+    title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
+    subtitle: { zh: "查看設備狀態與使用者操作紀錄", en: "View device status and user activity logs", ja: "デバイスステータスとユーザー操作ログを表示" },
+    tabDevice: { zh: "設備紀錄", en: "Device Logs", ja: "デバイスログ" },
+    tabActivity: { zh: "操作紀錄", en: "Activity Logs", ja: "操作ログ" },
     searchPlaceholder: { zh: "搜尋紀錄...", en: "Search logs...", ja: "ログを検索..." },
     allTypes: { zh: "所有類型", en: "All Types", ja: "全タイプ" },
+    allCategories: { zh: "所有分類", en: "All Categories", ja: "全カテゴリ" },
     allScreens: { zh: "所有螢幕", en: "All Screens", ja: "全スクリーン" },
     allOrgs: { zh: "所有組織", en: "All Orgs", ja: "全組織" },
     unassigned: { zh: "未分配", en: "Unassigned", ja: "未割当" },
@@ -89,23 +166,37 @@ export default function DeviceLogsPage() {
     exportExcel: { zh: "匯出 Excel", en: "Export Excel", ja: "Excelエクスポート" },
   };
 
-  const handleExportExcel = () => {
-    const headerMap = { zh: ["時間", "螢幕", "操作者", "事件類型", "事件標題", "詳細"], en: ["Time", "Screen", "Operator", "Type", "Title", "Detail"], ja: ["時間", "スクリーン", "操作者", "タイプ", "タイトル", "詳細"] };
-    const headers = headerMap[language];
-    const rows = filtered.map(l => [
+  const handleExportDeviceExcel = () => {
+    const headers = { zh: ["時間", "螢幕", "操作者", "事件類型", "事件標題", "詳細"], en: ["Time", "Screen", "Operator", "Type", "Title", "Detail"], ja: ["時間", "スクリーン", "操作者", "タイプ", "タイトル", "詳細"] }[language];
+    const rows = filteredDevice.map(l => [
       format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
-      l.screen_name || "",
-      l.operator_name || "-",
-      (EVENT_TYPE_CONFIG[l.event_type]?.label[language]) || l.event_type,
-      l.event_title,
-      l.event_detail,
+      l.screen_name || "", l.operator_name || "-",
+      (DEVICE_TYPE_CONFIG[l.event_type]?.label[language]) || l.event_type,
+      l.event_title, l.event_detail,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     ws["!cols"] = [{ wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 36 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, labels.title[language]);
+    XLSX.utils.book_append_sheet(wb, ws, labels.tabDevice[language]);
     XLSX.writeFile(wb, `device-logs-${format(new Date(), "yyyyMMdd-HHmm")}.xlsx`);
   };
+
+  const handleExportActivityExcel = () => {
+    const headers = { zh: ["時間", "使用者", "分類", "操作", "目標", "詳細"], en: ["Time", "User", "Category", "Action", "Target", "Detail"], ja: ["時間", "ユーザー", "カテゴリ", "操作", "対象", "詳細"] }[language];
+    const rows = filteredActivity.map(l => [
+      format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
+      l.user_name || "", (ACTIVITY_CATEGORY_CONFIG[l.category]?.label[language]) || l.category,
+      l.action, l.target_name || l.target_type, l.detail,
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 36 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, labels.tabActivity[language]);
+    XLSX.writeFile(wb, `activity-logs-${format(new Date(), "yyyyMMdd-HHmm")}.xlsx`);
+  };
+
+  const currentFiltered = activeTab === "device" ? filteredDevice : filteredActivity;
+  const handleExport = activeTab === "device" ? handleExportDeviceExcel : handleExportActivityExcel;
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -115,100 +206,155 @@ export default function DeviceLogsPage() {
           <p className="text-sm text-muted-foreground mt-1">{labels.subtitle[language]}</p>
         </div>
         <div className="flex gap-2 self-start">
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleExportExcel} disabled={filtered.length === 0}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport} disabled={currentFiltered.length === 0}>
             <Download className="w-4 h-4" />
             {labels.exportExcel[language]}
           </Button>
-          <Button variant="outline" size="sm" className="gap-2" onClick={fetchData}>
+          <Button variant="outline" size="sm" className="gap-2" onClick={fetchAll}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder={labels.searchPlaceholder[language]} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{labels.allTypes[language]}</SelectItem>
-            {Object.entries(EVENT_TYPE_CONFIG).map(([key, cfg]) => (
-              <SelectItem key={key} value={key}>{cfg.label[language]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterScreen} onValueChange={setFilterScreen}>
-          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{labels.allScreens[language]}</SelectItem>
-            {screens.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {isAdmin && orgs.length > 0 && (
-          <Select value={filterOrgId} onValueChange={setFilterOrgId}>
-            <SelectTrigger className="w-[180px]">
-              <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{labels.allOrgs[language]}</SelectItem>
-              <SelectItem value="none">{labels.unassigned[language]}</SelectItem>
-              {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-sm grid-cols-2">
+          <TabsTrigger value="device" className="gap-1.5">
+            <Monitor className="w-3.5 h-3.5" />{labels.tabDevice[language]}
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="gap-1.5">
+            <User className="w-3.5 h-3.5" />{labels.tabActivity[language]}
+          </TabsTrigger>
+        </TabsList>
 
-      <p className="text-xs text-muted-foreground">
-        {labels.totalLogs[language].replace("{count}", String(filtered.length))}
-      </p>
+        {/* ===== Device Logs Tab ===== */}
+        <TabsContent value="device" className="space-y-4 mt-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder={labels.searchPlaceholder[language]} value={deviceSearch} onChange={e => setDeviceSearch(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={deviceFilterType} onValueChange={setDeviceFilterType}>
+              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{labels.allTypes[language]}</SelectItem>
+                {Object.entries(DEVICE_TYPE_CONFIG).map(([key, cfg]) => (
+                  <SelectItem key={key} value={key}>{cfg.label[language]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={deviceFilterScreen} onValueChange={setDeviceFilterScreen}>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{labels.allScreens[language]}</SelectItem>
+                {screens.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {isAdmin && orgs.length > 0 && (
+              <Select value={deviceFilterOrg} onValueChange={setDeviceFilterOrg}>
+                <SelectTrigger className="w-[180px]">
+                  <Building2 className="w-4 h-4 mr-2 text-muted-foreground" /><SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{labels.allOrgs[language]}</SelectItem>
+                  <SelectItem value="none">{labels.unassigned[language]}</SelectItem>
+                  {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{labels.totalLogs[language].replace("{count}", String(filteredDevice.length))}</p>
+          {deviceLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+          ) : filteredDevice.length === 0 ? (
+            <Card className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{labels.noLogs[language]}</p></Card>
+          ) : (
+            <div className="space-y-2">
+              {filteredDevice.map((log, i) => {
+                const cfg = DEVICE_TYPE_CONFIG[log.event_type] || DEVICE_TYPE_CONFIG.system;
+                const Icon = cfg.icon;
+                return (
+                  <Card key={log.id} className={`p-3 flex items-start gap-3 shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
+                    <div className={`mt-0.5 p-1.5 rounded-lg ${cfg.color}`}><Icon className="w-4 h-4" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-foreground">{log.event_title}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{cfg.label[language]}</Badge>
+                      </div>
+                      {log.event_detail && <p className="text-xs text-muted-foreground mt-0.5">{log.event_detail}</p>}
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
+                        <span className="flex items-center gap-1"><Monitor className="w-3 h-3" />{log.screen_name}</span>
+                        {log.operator_name && <span className="flex items-center gap-1"><User className="w-3 h-3" />{log.operator_name}</span>}
+                        <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
 
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-      ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center text-muted-foreground">
-          <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p>{labels.noLogs[language]}</p>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((log, i) => {
-            const cfg = EVENT_TYPE_CONFIG[log.event_type] || EVENT_TYPE_CONFIG.system;
-            const Icon = cfg.icon;
-            return (
-              <Card key={log.id} className={`p-3 flex items-start gap-3 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-                <div className={`mt-0.5 p-1.5 rounded-lg ${cfg.color}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-foreground">{log.event_title}</span>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{cfg.label[language]}</Badge>
-                  </div>
-                  {log.event_detail && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{log.event_detail}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
-                    <span className="flex items-center gap-1">
-                      <Monitor className="w-3 h-3" />
-                      {log.screen_name}
-                    </span>
-                    {log.operator_name && (
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {log.operator_name}
-                      </span>
-                    )}
-                    <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+        {/* ===== Activity Logs Tab ===== */}
+        <TabsContent value="activity" className="space-y-4 mt-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder={labels.searchPlaceholder[language]} value={activitySearch} onChange={e => setActivitySearch(e.target.value)} className="pl-9" />
+            </div>
+            <Select value={activityFilterCategory} onValueChange={setActivityFilterCategory}>
+              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{labels.allCategories[language]}</SelectItem>
+                {Object.entries(ACTIVITY_CATEGORY_CONFIG).map(([key, cfg]) => (
+                  <SelectItem key={key} value={key}>{cfg.label[language]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isAdmin && orgs.length > 0 && (
+              <Select value={activityFilterOrg} onValueChange={setActivityFilterOrg}>
+                <SelectTrigger className="w-[180px]">
+                  <Building2 className="w-4 h-4 mr-2 text-muted-foreground" /><SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{labels.allOrgs[language]}</SelectItem>
+                  <SelectItem value="none">{labels.unassigned[language]}</SelectItem>
+                  {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{labels.totalLogs[language].replace("{count}", String(filteredActivity.length))}</p>
+          {activityLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+          ) : filteredActivity.length === 0 ? (
+            <Card className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{labels.noLogs[language]}</p></Card>
+          ) : (
+            <div className="space-y-2">
+              {filteredActivity.map((log, i) => {
+                const cfg = ACTIVITY_CATEGORY_CONFIG[log.category] || ACTIVITY_CATEGORY_CONFIG.auth;
+                const Icon = cfg.icon;
+                return (
+                  <Card key={log.id} className={`p-3 flex items-start gap-3 shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
+                    <div className={`mt-0.5 p-1.5 rounded-lg ${cfg.color}`}><Icon className="w-4 h-4" /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-foreground">{log.action}</span>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{cfg.label[language]}</Badge>
+                      </div>
+                      {log.target_name && <p className="text-xs text-muted-foreground mt-0.5">{log.target_name}</p>}
+                      {log.detail && <p className="text-xs text-muted-foreground mt-0.5">{log.detail}</p>}
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground/60">
+                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{log.user_name}</span>
+                        <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

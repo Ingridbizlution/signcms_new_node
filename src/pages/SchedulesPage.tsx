@@ -22,6 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 type PlaylistItemType = "media" | "design_project" | "widget";
 
@@ -211,6 +212,7 @@ export default function SchedulesPage() {
       }));
       await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedUpdated"));
+      logActivity({ action: "編輯排程", category: "schedule", targetName: form.name, targetId: editingId! });
     } else {
       const { data: newSched, error } = await (supabase as any).from("schedules").insert({
         name: form.name, screen_id: form.screen_id, start_time: form.startTime,
@@ -226,6 +228,7 @@ export default function SchedulesPage() {
       }));
       await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedAdded"));
+      logActivity({ action: "新增排程", category: "schedule", targetName: form.name });
     }
 
     setSaving(false);
@@ -237,7 +240,12 @@ export default function SchedulesPage() {
     if (deleteId) {
       const { error } = await (supabase as any).from("schedules").delete().eq("id", deleteId);
       if (error) toast.error(error.message);
-      else { toast.success(t("schedDeleted")); fetchAll(); }
+      else {
+        const deleted = schedules.find(s => s.id === deleteId);
+        toast.success(t("schedDeleted"));
+        logActivity({ action: "刪除排程", category: "schedule", targetName: deleted?.name || "", targetId: deleteId });
+        fetchAll();
+      }
       setDeleteId(null);
     }
   };
