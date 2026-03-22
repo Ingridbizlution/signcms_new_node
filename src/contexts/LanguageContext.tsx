@@ -548,6 +548,7 @@ const translations = {
   orgNoOrgs: { zh: "尚未建立任何組織", en: "No organizations yet", ja: "組織がまだありません" },
   orgTeamCount: { zh: "個團隊", en: "teams", ja: "チーム" },
   orgMemberCount: { zh: "位成員", en: "members", ja: "メンバー" },
+  orgFilterAll: { zh: "所有組織", en: "All Organizations", ja: "すべての組織" },
 
   teamTitle: { zh: "團隊管理", en: "Teams", ja: "チーム管理" },
   teamAdd: { zh: "新增團隊", en: "Add Team", ja: "チームを追加" },

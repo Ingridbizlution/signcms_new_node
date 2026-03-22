@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarClock, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown,
-  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers, Code2,
+  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers, Code2, Building2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ interface PlaylistItem {
 interface Schedule {
   id: string;
   name: string;
+  org_id: string | null;
   screen_id: string;
   screen_label: string;
   start_time: string;
@@ -80,6 +82,7 @@ export default function SchedulesPage() {
   const { isAdmin } = useUserRole();
   const { t, language } = useLanguage();
   const { user } = useAuth();
+  const { orgs, defaultOrgId } = useUserOrgs();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [screenOptions, setScreenOptions] = useState<ScreenOption[]>([]);
   const [mediaOptions, setMediaOptions] = useState<MediaOption[]>([]);
@@ -92,6 +95,7 @@ export default function SchedulesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [filterOrgId, setFilterOrgId] = useState<string>("all");
 
   const [form, setForm] = useState({
     name: "", screen_id: "", startTime: "09:00", endTime: "18:00",
@@ -151,7 +155,7 @@ export default function SchedulesPage() {
           };
         });
       return {
-        id: s.id, name: s.name, screen_id: s.screen_id,
+        id: s.id, name: s.name, org_id: s.org_id || null, screen_id: s.screen_id,
         screen_label: screenMap.get(s.screen_id) || "",
         start_time: s.start_time, end_time: s.end_time,
         days: s.days || [], enabled: s.enabled, items: schedItems,
@@ -163,6 +167,12 @@ export default function SchedulesPage() {
   };
 
   useEffect(() => { fetchAll(); }, []);
+
+  const filteredSchedules = useMemo(() => {
+    if (filterOrgId === "all") return schedules;
+    if (filterOrgId === "none") return schedules.filter(s => !s.org_id);
+    return schedules.filter(s => s.org_id === filterOrgId);
+  }, [schedules, filterOrgId]);
 
   const openAdd = () => {
     setEditingId(null);
@@ -205,6 +215,7 @@ export default function SchedulesPage() {
       const { data: newSched, error } = await (supabase as any).from("schedules").insert({
         name: form.name, screen_id: form.screen_id, start_time: form.startTime,
         end_time: form.endTime, days: form.days, created_by: user?.id,
+        org_id: defaultOrgId,
       }).select("id").single();
 
       if (error) { toast.error(error.message); setSaving(false); return; }
@@ -309,16 +320,31 @@ export default function SchedulesPage() {
           <h1 className="text-2xl font-bold text-foreground">{t("schedTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t("schedSubtitle")}</p>
         </div>
-        {isAdmin && (
-          <Button onClick={openAdd} className="gap-2 self-start"><Plus className="w-4 h-4" />{t("schedAdd")}</Button>
-        )}
+        <div className="flex items-center gap-2 self-start">
+          {isAdmin && orgs.length > 1 && (
+            <Select value={filterOrgId} onValueChange={setFilterOrgId}>
+              <SelectTrigger className="w-[180px] h-9">
+                <Building2 className="w-4 h-4 mr-1.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("orgFilterAll")}</SelectItem>
+                {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                <SelectItem value="none">— 未分配 —</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {isAdmin && (
+            <Button onClick={openAdd} className="gap-2"><Plus className="w-4 h-4" />{t("schedAdd")}</Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
         <>
-          {schedules.length === 0 && (
+          {filteredSchedules.length === 0 && (
             <Card className="p-12 text-center text-muted-foreground">
               <CalendarClock className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p>{t("schedNoResult")}</p>
@@ -326,7 +352,7 @@ export default function SchedulesPage() {
           )}
 
           <div className="grid gap-4">
-            {schedules.map((schedule, i) => (
+            {filteredSchedules.map((schedule, i) => (
               <div key={schedule.id} className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${!schedule.enabled ? "[&>*]:opacity-60" : ""}`}>
                 <Card className="hover-lift shadow-sm">
                   <div className="p-4 flex items-start gap-4">

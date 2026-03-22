@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import {
   Send, CalendarClock, Monitor, CheckCircle2, Clock, Loader2,
-  Play, Zap, Calendar as CalendarIcon, ListMusic,
+  Play, Zap, Calendar as CalendarIcon, ListMusic, Building2,
   CheckCheck, Search, AlertTriangle, ShieldAlert, X, Layers, RotateCcw,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -29,6 +31,7 @@ import { toast } from "sonner";
 interface ScheduleOption {
   id: string;
   name: string;
+  org_id: string | null;
   screen_name: string;
   items_count: number;
 }
@@ -38,6 +41,7 @@ interface ScreenOption {
   name: string;
   branch: string;
   online: boolean;
+  org_id: string | null;
 }
 
 interface PublishRecord {
@@ -53,6 +57,8 @@ export default function PublishingCenterPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
+  const { orgs } = useUserOrgs();
+  const [filterOrgId, setFilterOrgId] = useState<string>("all");
 
   // Data
   const [schedules, setSchedules] = useState<ScheduleOption[]>([]);
@@ -86,8 +92,8 @@ export default function PublishingCenterPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [schedRes, screenRes, recordRes] = await Promise.all([
-      (supabase as any).from("schedules").select("id, name, screen_id, screens:screen_id(name)").order("name"),
-      (supabase as any).from("screens").select("id, name, branch, online").order("branch, name"),
+      (supabase as any).from("schedules").select("id, name, org_id, screen_id, screens:screen_id(name)").order("name"),
+      (supabase as any).from("screens").select("id, name, branch, online, org_id").order("branch, name"),
       (supabase as any).from("publish_records").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
 
@@ -100,20 +106,34 @@ export default function PublishingCenterPage() {
     setSchedules((schedRes.data || []).map((s: any) => ({
       id: s.id,
       name: s.name,
+      org_id: s.org_id || null,
       screen_name: s.screens?.name || "-",
       items_count: countMap.get(s.id) || 0,
     })));
-    setScreens((screenRes.data || []) as ScreenOption[]);
+    setScreens((screenRes.data || []).map((s: any) => ({ ...s, org_id: s.org_id || null })) as ScreenOption[]);
     setRecords((recordRes.data || []) as PublishRecord[]);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Filter by org
+  const filteredSchedules = useMemo(() => {
+    if (filterOrgId === "all") return schedules;
+    if (filterOrgId === "none") return schedules.filter(s => !s.org_id);
+    return schedules.filter(s => s.org_id === filterOrgId);
+  }, [schedules, filterOrgId]);
+
+  const filteredScreens = useMemo(() => {
+    if (filterOrgId === "all") return screens;
+    if (filterOrgId === "none") return screens.filter(s => !s.org_id);
+    return screens.filter(s => s.org_id === filterOrgId);
+  }, [screens, filterOrgId]);
+
   // Grouped screens by group (branch field)
   const groupedScreens = useMemo(() => {
     const groups = new Map<string, ScreenOption[]>();
-    const filtered = screens.filter((s) =>
+    const filtered = filteredScreens.filter((s) =>
       s.name.toLowerCase().includes(searchScreen.toLowerCase()) ||
       s.branch.toLowerCase().includes(searchScreen.toLowerCase())
     );
@@ -123,10 +143,10 @@ export default function PublishingCenterPage() {
       groups.get(group)!.push(s);
     });
     return groups;
-  }, [screens, searchScreen, t]);
+  }, [filteredScreens, searchScreen, t]);
 
-  const allScreenIds = useMemo(() => new Set(screens.map((s) => s.id)), [screens]);
-  const allSelected = selectedScreenIds.size === screens.length && screens.length > 0;
+  const allScreenIds = useMemo(() => new Set(filteredScreens.map((s) => s.id)), [filteredScreens]);
+  const allSelected = selectedScreenIds.size === filteredScreens.length && filteredScreens.length > 0;
 
   // Check if there are active emergency records
   const hasActiveEmergency = useMemo(() => records.some((r) => r.status === "emergency"), [records]);
@@ -318,7 +338,20 @@ export default function PublishingCenterPage() {
           <p className="text-muted-foreground mt-1">{t("publishSubtitle")}</p>
         </div>
         {isAdmin && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {orgs.length > 1 && (
+              <Select value={filterOrgId} onValueChange={setFilterOrgId}>
+                <SelectTrigger className="w-[180px] h-9">
+                  <Building2 className="w-4 h-4 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("orgFilterAll")}</SelectItem>
+                  {orgs.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                  <SelectItem value="none">— 未分配 —</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             {hasActiveEmergency && (
               <Button
                 variant="outline"
@@ -351,9 +384,9 @@ export default function PublishingCenterPage() {
           </h2>
           <Separator />
           <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-            {schedules.length === 0 ? (
+            {filteredSchedules.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">{t("publishNoPlaylists")}</p>
-            ) : schedules.map((s) => (
+            ) : filteredSchedules.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setSelectedScheduleId(s.id === selectedScheduleId ? null : s.id)}
@@ -403,7 +436,7 @@ export default function PublishingCenterPage() {
             <label htmlFor="select-all" className="text-sm font-medium text-foreground cursor-pointer">
               {t("publishSelectAll")}
             </label>
-            <span className="text-xs text-muted-foreground ml-auto">{screens.length} {t("publishScreensTotal")}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{filteredScreens.length} {t("publishScreensTotal")}</span>
           </div>
           <Separator />
           <div className="space-y-3 max-h-[340px] overflow-y-auto">
