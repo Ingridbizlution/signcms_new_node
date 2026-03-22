@@ -324,7 +324,7 @@ const MediaPage = () => {
     setLoading(true);
     const { data, error } = await (supabase as any)
       .from("media_items")
-      .select("id, name, type, url, thumbnail, size, dimensions, duration, created_at, design_project_id")
+      .select("id, name, type, url, thumbnail, size, dimensions, duration, created_at, design_project_id, is_system")
       .order("created_at", { ascending: false });
 
     if (error) {
