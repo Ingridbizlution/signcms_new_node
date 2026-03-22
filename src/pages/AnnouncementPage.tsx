@@ -83,6 +83,10 @@ const AnnouncementPage = () => {
     subjectPh: { zh: "例如：年終大特賣、緊急停電通知", en: "e.g. Year-End Sale, Emergency Notice", ja: "例：年末セール、緊急停電通知" },
     dept: { zh: "發佈單位", en: "Department", ja: "発信部署" },
     deptPh: { zh: "選擇發佈單位", en: "Select department", ja: "部署を選択" },
+    categoryLabel: { zh: "公告類別", en: "Category", ja: "カテゴリ" },
+    categoryPh: { zh: "選擇公告類別", en: "Select category", ja: "カテゴリを選択" },
+    pinnedLabel: { zh: "重要公告置頂", en: "Pin as Important", ja: "重要：トップに固定" },
+    pinnedDesc: { zh: "開啟後此公告將置頂顯示", en: "This announcement will be pinned to the top", ja: "このお知らせをトップに固定します" },
     contentLabel: { zh: "公告內容", en: "Content", ja: "内容" },
     contentPh: { zh: "輸入公告的詳細內容…", en: "Enter announcement details…", ja: "お知らせの詳細を入力…" },
     imageLabel: { zh: "附件圖片", en: "Attachment Image", ja: "添付画像" },
@@ -99,6 +103,7 @@ const AnnouncementPage = () => {
     statusExpired: { zh: "已過期", en: "Expired", ja: "終了" },
     statusPending: { zh: "尚未開始", en: "Pending", ja: "配信前" },
     colSubject: { zh: "主旨", en: "Subject", ja: "件名" },
+    colCategory: { zh: "類別", en: "Category", ja: "カテゴリ" },
     colDept: { zh: "發佈單位", en: "Department", ja: "部署" },
     colPeriod: { zh: "時間區間", en: "Period", ja: "期間" },
     colStatus: { zh: "狀態", en: "Status", ja: "ステータス" },
@@ -107,6 +112,7 @@ const AnnouncementPage = () => {
     successPublish: { zh: "公告已成功發佈！", en: "Announcement published!", ja: "お知らせを公開しました！" },
     errorFill: { zh: "請填寫主旨、內容、起訖時間", en: "Please fill in subject, content, and dates", ja: "件名・内容・日時を入力してください" },
     deleted: { zh: "已刪除公告", en: "Announcement deleted", ja: "お知らせを削除しました" },
+    pinnedTag: { zh: "📌 置頂", en: "📌 Pinned", ja: "📌 固定" },
   };
 
   const t = (key: keyof typeof texts) => texts[key][language];
