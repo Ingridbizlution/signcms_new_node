@@ -159,7 +159,7 @@ function WidgetLivePreview({ config }: { config: WidgetConfig }) {
             {/* Date window */}
             {config.showDate && (
               <>
-                <rect x="120" y="92" width="30" height="16" rx="3" fill={fg} opacity="0.1" stroke={fg} strokeWidth="0.5" opacity="0.2" />
+                <rect x="120" y="92" width="30" height="16" rx="3" fill={fg} opacity="0.15" stroke={fg} strokeWidth="0.5" />
                 <text x="135" y="101" textAnchor="middle" dominantBaseline="central" fill={fg} fontSize="8" fontWeight="500" opacity="0.7">{dateStr}</text>
               </>
             )}
