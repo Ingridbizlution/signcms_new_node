@@ -194,6 +194,12 @@ export default function DeviceLogsPage() {
                       <Monitor className="w-3 h-3" />
                       {log.screen_name}
                     </span>
+                    {log.operator_name && (
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {log.operator_name}
+                      </span>
+                    )}
                     <span>{format(new Date(log.created_at), "yyyy-MM-dd HH:mm:ss")}</span>
                   </div>
                 </div>
