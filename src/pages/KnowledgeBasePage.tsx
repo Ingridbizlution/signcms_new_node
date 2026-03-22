@@ -189,7 +189,7 @@ const KnowledgeBasePage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="上傳文件">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="上傳文件" onClick={() => setFileItem(item)}>
                           <Upload className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" title="編輯">
