@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 interface ScheduleOption {
   id: string;
