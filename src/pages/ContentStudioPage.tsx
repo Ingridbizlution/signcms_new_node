@@ -397,10 +397,13 @@ export default function ContentStudioPage() {
 
   // DB media for picker
   const [dbMedia, setDbMedia] = useState<{ id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[]>([]);
+  const [dbWidgets, setDbWidgets] = useState<{ id: string; name: string; url: string }[]>([]);
 
   useEffect(() => {
     (supabase as any).from("media_items").select("id, name, type, url, thumbnail, duration").order("created_at", { ascending: false }).then((res: any) => {
-      setDbMedia(res.data || []);
+      const all = res.data || [];
+      setDbMedia(all.filter((m: any) => m.type !== "widget"));
+      setDbWidgets(all.filter((m: any) => m.type === "widget"));
     });
   }, []);
 
