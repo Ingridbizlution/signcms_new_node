@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor,
   RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
-  Trash2, Send, ShieldCheck, Image, Brush,
+  Trash2, Send, ShieldCheck, Image, Brush, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
 import * as XLSX from "xlsx";
