@@ -641,6 +641,7 @@ const MediaPage = () => {
       thumbnail: "", size: "-", dimensions: "auto",
       uploaded_by: user?.id,
       design_project_id: widgetForm.projectId !== NONE_PROJECT_VALUE ? widgetForm.projectId : null,
+      org_id: defaultOrgId || null,
     });
     if (error) { toast.error(error.message); } else {
       toast.success(t("widgetCreated"));
