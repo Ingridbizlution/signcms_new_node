@@ -285,7 +285,6 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   };
 
   const confirmPickerSelection = () => {
-    const existingKeys = new Set(mediaItems.map((item) => `${item.type}-${item.id}`));
     const appendedItems: MediaItem[] = [];
 
     Array.from(selectedPickerIds).forEach((pickerId) => {
@@ -294,18 +293,12 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
 
       if (item.kind === "media") {
         const m = item.raw;
-        const key = `${m.type}-${m.id}`;
-        if (existingKeys.has(key)) return;
-        existingKeys.add(key);
         const dur = m.type === "video" && m.duration ? parseFloat(m.duration) || 10 : 5;
         appendedItems.push({ id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: dur });
         return;
       }
 
       const w = item.raw;
-      const key = `widget-${w.id}`;
-      if (existingKeys.has(key)) return;
-      existingKeys.add(key);
       appendedItems.push({ id: w.id, type: "widget", url: "", name: w.name, duration: 5, widgetConfig: w.config });
     });
 
