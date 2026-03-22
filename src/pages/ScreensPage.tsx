@@ -186,6 +186,7 @@ export default function ScreensPage() {
       name: screen.name, branch: screen.branch || "", location: screen.location, resolution: screen.resolution, org_id: screen.org_id || "",
       serial_number: screen.serial_number || "", ip_address: screen.ip_address || "", connection_type: screen.connection_type || "wired",
       avg_upload_speed: screen.avg_upload_speed || "", avg_download_speed: screen.avg_download_speed || "",
+      firmware_version: screen.firmware_version || "",
     });
     setIsCreatingInForm(false);
     setInlineNewGroup("");
