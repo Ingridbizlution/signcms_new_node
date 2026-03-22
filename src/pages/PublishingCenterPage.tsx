@@ -295,7 +295,17 @@ export default function PublishingCenterPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Restore success overlay */}
+      {showRestoreSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="flex flex-col items-center gap-4 animate-in zoom-in-75 duration-500">
+            <div className="w-24 h-24 rounded-full bg-sky-500/15 flex items-center justify-center">
+              <RotateCcw className="w-14 h-14 text-sky-500 animate-in zoom-in-50 duration-700" />
+            </div>
+            <p className="text-xl font-bold text-foreground">{t("restoreNormalSuccess")}</p>
+            <p className="text-sm text-muted-foreground">{t("restoreNormalSuccessDesc")}</p>
+          </div>
+        </div>
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
