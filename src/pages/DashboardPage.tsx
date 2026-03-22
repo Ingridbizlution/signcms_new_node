@@ -41,7 +41,9 @@ export default function DashboardPage() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [mediaItems, setMediaItems] = useState<any[]>([]);
   const [scheduleItems, setScheduleItems] = useState<any[]>([]);
+  const [emergencyCount, setEmergencyCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
