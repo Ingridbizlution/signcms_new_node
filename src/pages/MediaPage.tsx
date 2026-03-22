@@ -81,6 +81,7 @@ const TIMEZONE_OPTIONS = [
   { value: "Australia/Sydney", label: "🇦🇺 雪梨 (UTC+10/+11)" },
 ];
 
+function WidgetPreviewCard({ config }: { config: WidgetConfig }) {
   const { t } = useLanguage();
   const Icon = WIDGET_ICONS[config.widgetType] || Code2;
   const labels: Record<WidgetSubType, string> = {
