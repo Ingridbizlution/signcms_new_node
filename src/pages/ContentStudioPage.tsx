@@ -300,6 +300,43 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets }: {
           )}
         </div>
 
+        {/* Widget section */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs text-muted-foreground flex items-center gap-1"><Code2 className="w-3 h-3" /> Widget</label>
+            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setShowWidgetPicker(!showWidgetPicker)}>
+              <Plus className="w-3 h-3" /> {t("add")}
+            </Button>
+          </div>
+          {content.type === "widget" && content.widgetName && (
+            <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs mb-2">
+              <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
+              <span className="truncate flex-1 text-foreground">{content.widgetName}</span>
+              <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => onUpdate({ ...content, type: "color", widgetId: undefined, widgetName: undefined, widgetConfig: undefined })}><X className="w-3 h-3" /></Button>
+            </div>
+          )}
+          {showWidgetPicker && (
+            <div className="mt-2 border border-border rounded-md p-2 bg-card max-h-32 overflow-y-auto space-y-1">
+              {dbWidgets.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+              ) : dbWidgets.map((w) => {
+                let config: any = null;
+                try { if (w.url.startsWith("{")) config = JSON.parse(w.url); } catch {}
+                const WidgetIcon = config?.widgetType === "clock" ? Clock : config?.widgetType === "date" ? Calendar : config?.widgetType === "webpage" ? Globe : Code2;
+                return (
+                  <button key={w.id} className="w-full flex items-center gap-2 p-1.5 rounded hover:bg-muted transition-colors text-left text-xs" onClick={() => {
+                    onUpdate({ ...content, type: "widget", widgetId: w.id, widgetName: w.name, widgetConfig: config });
+                    setShowWidgetPicker(false);
+                  }}>
+                    <WidgetIcon className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
+                    <span className="truncate text-foreground">{w.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Text input */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">{t("studioText")}</label>
