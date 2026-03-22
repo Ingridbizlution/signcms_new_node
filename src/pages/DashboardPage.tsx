@@ -226,7 +226,7 @@ export default function DashboardPage() {
         {/* Total Media */}
         <Card className="p-4 hover-lift shadow-sm opacity-0 animate-count-up stagger-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center" title={t("dashTotalMedia")}>
               <BarChart3 className="w-4.5 h-4.5 text-primary" />
             </div>
           </div>
