@@ -27,6 +27,7 @@ interface Props {
 }
 
 export function KnowledgeFilePanel({ knowledgeItemId, itemTitle }: Props) {
+  const { t } = useLanguage();
   const { files, loading, uploading, uploadFiles, deleteFile, getFileUrl } =
     useKnowledgeFiles(knowledgeItemId);
   const inputRef = useRef<HTMLInputElement>(null);
