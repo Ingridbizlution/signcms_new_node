@@ -1070,12 +1070,12 @@ export default function ContentStudioPage() {
                   onMouseDown={(e) => { if (overlay.locked) return; if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
                 >
                   {/* Content render */}
-                  {overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
+                  {overlay.content?.type === "media" && mediaItems.length > 0 ? (
+                    <CarouselPreview items={mediaItems} transition={overlay.content.carouselTransition || "fade"} />
+                  ) : overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
                     <ZoneAnimatedWrapper animation={overlay.content.widgetConfig.animation}>
                       <WidgetZonePreview config={overlay.content.widgetConfig} />
                     </ZoneAnimatedWrapper>
-                  ) : overlay.content?.type === "media" && mediaItems.length > 0 ? (
-                    <CarouselPreview items={mediaItems} transition={overlay.content.carouselTransition || "fade"} />
                   ) : overlay.content?.type === "text" && overlay.content.value ? (
                     <div className="p-2 w-full" style={{ color: overlay.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(overlay.content.fontSize || 20, 40), textAlign: overlay.content.textAlign || "center" }}>
                       <span className="font-bold leading-tight whitespace-pre-line">{overlay.content.value}</span>
