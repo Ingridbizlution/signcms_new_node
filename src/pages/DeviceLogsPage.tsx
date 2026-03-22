@@ -215,12 +215,25 @@ export default function SystemLogsPage() {
   const activityTotalPages = Math.max(1, Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE));
   const paginatedActivity = filteredActivity.slice((activityPage - 1) * ACTIVITY_PAGE_SIZE, activityPage * ACTIVITY_PAGE_SIZE);
 
-  // --- Playback computed data ---
+  // --- Playback filtered data ---
+  const filteredPlayback = useMemo(() => {
+    return playbackLogs.filter(l => {
+      if (playbackFilterScreen !== "all" && l.screen_id !== playbackFilterScreen) return false;
+      if (playbackStartDate && new Date(l.played_at) < startOfDay(playbackStartDate)) return false;
+      if (playbackEndDate) {
+        const endOfEndDate = new Date(playbackEndDate);
+        endOfEndDate.setHours(23, 59, 59, 999);
+        if (new Date(l.played_at) > endOfEndDate) return false;
+      }
+      return true;
+    });
+  }, [playbackLogs, playbackFilterScreen, playbackStartDate, playbackEndDate]);
+
   const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
 
   const playbackSummary = useMemo(() => {
     const map = new Map<string, { count: number; totalSeconds: number }>();
-    playbackLogs.forEach(l => {
+    filteredPlayback.forEach(l => {
       const existing = map.get(l.media_name) || { count: 0, totalSeconds: 0 };
       existing.count += 1;
       existing.totalSeconds += l.duration_seconds;
@@ -229,19 +242,23 @@ export default function SystemLogsPage() {
     return Array.from(map.entries())
       .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.count - a.count);
-  }, [playbackLogs]);
+  }, [filteredPlayback]);
 
   const playbackTrend = useMemo(() => {
+    const endD = playbackEndDate || new Date();
+    const startD = playbackStartDate || subDays(endD, 6);
+    const diffDays = Math.max(1, Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const numDays = Math.min(diffDays, 30); // cap at 30 days
     const days: { date: string; count: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const day = subDays(new Date(), i);
+    for (let i = numDays - 1; i >= 0; i--) {
+      const day = subDays(endD, i);
       const dayStr = format(day, "yyyy-MM-dd");
       const label = format(day, "MM/dd");
-      const count = playbackLogs.filter(l => format(new Date(l.played_at), "yyyy-MM-dd") === dayStr).length;
+      const count = filteredPlayback.filter(l => format(new Date(l.played_at), "yyyy-MM-dd") === dayStr).length;
       days.push({ date: label, count });
     }
     return days;
-  }, [playbackLogs]);
+  }, [filteredPlayback, playbackStartDate, playbackEndDate]);
 
   const labels = {
     title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
