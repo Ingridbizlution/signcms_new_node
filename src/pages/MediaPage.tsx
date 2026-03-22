@@ -1109,3 +1109,51 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+function getEncodingFromUrl(url: string): string {
+  if (url.startsWith("widget://")) return "Widget JSON";
+  const match = url.match(/^data:([^;,]+)/);
+  if (match) return match[1];
+  return "-";
+}
+
+async function computeMD5(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  // Use first 16 bytes (128 bits) to mimic MD5 length
+  return hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function PreviewInfoPanel({ item, getProjectName, t }: { item: MediaItemRow; getProjectName: (id?: string | null) => string; t: (key: string) => string }) {
+  const [hash, setHash] = useState<string>("...");
+
+  useEffect(() => {
+    computeMD5(item.url).then(setHash).catch(() => setHash("-"));
+  }, [item.url]);
+
+  const encoding = getEncodingFromUrl(item.url);
+  const uploadDate = item.created_at ? new Date(item.created_at).toLocaleString("zh-TW") : "-";
+
+  const fields = [
+    { label: t("mediaFileName") || "檔案名稱", value: item.name },
+    { label: t("mediaResolution") || "解析度", value: item.dimensions },
+    { label: t("mediaFileSize") || "檔案大小", value: item.size },
+    { label: "編碼格式", value: encoding },
+    { label: t("mediaUploadDate") || "上傳日期", value: uploadDate },
+    { label: "MD5", value: hash },
+    { label: t("mediaProjectGroup") || "專案分類", value: getProjectName(item.design_project_id) },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-sm">
+      {fields.map((f) => (
+        <div key={f.label} className="rounded-lg bg-muted/50 p-3">
+          <p className="text-xs text-muted-foreground">{f.label}</p>
+          <p className="font-medium text-foreground break-all">{f.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
