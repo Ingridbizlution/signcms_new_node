@@ -431,6 +431,7 @@ export default function SchedulesPage() {
               </div>
             )}
           </Card>
+          </div>
         ))}
       </div>
 
