@@ -892,8 +892,62 @@ export default function ContentStudioPage() {
               );
             })}
 
+            {/* Overlay blocks */}
+            {overlays.map((overlay) => {
+              const isSelected = selectedOverlay === overlay.id;
+              const bg = overlay.content?.bgColor || "hsla(0, 0%, 0%, 0.7)";
+              const mediaItems = overlay.content?.mediaItems || [];
+              return (
+                <div key={overlay.id}
+                  className={`absolute cursor-move flex items-center justify-center overflow-hidden rounded-lg ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1 z-40" : "z-30 hover:ring-1 hover:ring-accent-foreground/50"}`}
+                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
+                  onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
+                >
+                  {/* Content render */}
+                  {overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
+                    <ZoneAnimatedWrapper animation={overlay.content.widgetConfig.animation}>
+                      <WidgetZonePreview config={overlay.content.widgetConfig} />
+                    </ZoneAnimatedWrapper>
+                  ) : overlay.content?.type === "media" && mediaItems.length > 0 ? (
+                    <CarouselPreview items={mediaItems} transition={overlay.content.carouselTransition || "fade"} />
+                  ) : overlay.content?.type === "text" && overlay.content.value ? (
+                    <div className="p-2 w-full" style={{ color: overlay.content.textColor || "hsl(0 0% 100%)", fontSize: Math.min(overlay.content.fontSize || 20, 40), textAlign: overlay.content.textAlign || "center" }}>
+                      <span className="font-bold leading-tight whitespace-pre-line">{overlay.content.value}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-white/60">
+                      <Move className="w-5 h-5" />
+                      <span className="text-[10px] font-medium">{overlay.label}</span>
+                    </div>
+                  )}
+
+                  {/* Label badge */}
+                  <span className="absolute top-1 left-1 bg-accent-foreground/80 text-background text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <Layers className="w-2.5 h-2.5" /> {overlay.label}
+                  </span>
+
+                  {/* Delete button */}
+                  {isSelected && (
+                    <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-5 w-5 z-50" onClick={(e) => { e.stopPropagation(); deleteOverlay(overlay.id); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
+
+                  {/* Resize handle bottom-right */}
+                  <div data-resize="true" className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end"
+                    onMouseDown={(e) => handleOverlayResizeStart(e, overlay.id, "se")}>
+                    <Maximize2 className="w-3 h-3 text-white/60 rotate-90" />
+                  </div>
+                </div>
+              );
+            })}
+
             {activeZone && (
               <ZoneEditor zone={activeZone} onUpdate={(content) => updateZoneContent(activeZone.id, content)} onClose={() => setSelectedZone(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
+            )}
+            {activeOverlay && (
+              <ZoneEditor zone={{ id: activeOverlay.id, x: 0, y: 0, w: 100, h: 100, label: activeOverlay.label, content: activeOverlay.content }} onUpdate={(content) => updateOverlayContent(activeOverlay.id, content)} onClose={() => setSelectedOverlay(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
             )}
           </div>
         </div>
