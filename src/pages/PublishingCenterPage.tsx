@@ -255,6 +255,7 @@ export default function PublishingCenterPage() {
     if (status === "scheduled") return <Badge variant="outline" className="gap-1 text-amber-600 border-amber-500/30 bg-amber-500/10"><Clock className="w-3 h-3" />{t("publishStatusScheduled")}</Badge>;
     if (status === "sending") return <Badge variant="outline" className="gap-1 text-blue-600 border-blue-500/30 bg-blue-500/10"><Loader2 className="w-3 h-3 animate-spin" />{t("publishStatusSending")}</Badge>;
     if (status === "emergency") return <Badge className="bg-red-500/15 text-red-600 border-red-500/30 gap-1 animate-pulse"><AlertTriangle className="w-3 h-3" />{t("publishStatusEmergency")}</Badge>;
+    if (status === "restored") return <Badge variant="outline" className="gap-1 text-sky-600 border-sky-500/30 bg-sky-500/10"><RotateCcw className="w-3 h-3" />{t("restoreNormal")}</Badge>;
     return <Badge variant="secondary">{status}</Badge>;
   };
 
