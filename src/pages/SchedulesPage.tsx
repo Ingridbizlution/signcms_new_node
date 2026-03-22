@@ -138,6 +138,7 @@ const emptyForm = {
 };
 
 export default function SchedulesPage() {
+  const { isAdmin } = useUserRole();
   const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
