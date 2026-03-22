@@ -97,10 +97,8 @@ function WidgetPreviewCard({ config }: { config: WidgetConfig }) {
   const { t } = useLanguage();
   const Icon = WIDGET_ICONS[config.widgetType] || Code2;
   const labels: Record<WidgetSubType, string> = {
-    date: t("widgetDate"),
-    clock: t("widgetClock"),
-    webpage: t("widgetWebpage"),
-    marquee: t("widgetMarquee"),
+    date: t("widgetDate"), clock: t("widgetClock"), webpage: t("widgetWebpage"), marquee: t("widgetMarquee"),
+    qrcode: t("widgetQrcode"), countdown: t("widgetCountdown"), youtube: t("widgetYoutube"), weather: t("widgetWeather"),
   };
 
   return (
