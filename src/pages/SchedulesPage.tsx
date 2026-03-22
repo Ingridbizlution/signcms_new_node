@@ -82,6 +82,7 @@ export default function SchedulesPage() {
   const { isAdmin } = useUserRole();
   const { t, language } = useLanguage();
   const { user } = useAuth();
+  const { orgs, defaultOrgId } = useUserOrgs();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [screenOptions, setScreenOptions] = useState<ScreenOption[]>([]);
   const [mediaOptions, setMediaOptions] = useState<MediaOption[]>([]);
@@ -94,6 +95,7 @@ export default function SchedulesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [filterOrgId, setFilterOrgId] = useState<string>("all");
 
   const [form, setForm] = useState({
     name: "", screen_id: "", startTime: "09:00", endTime: "18:00",
