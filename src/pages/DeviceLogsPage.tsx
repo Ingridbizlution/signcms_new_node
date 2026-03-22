@@ -401,7 +401,6 @@ export default function SystemLogsPage() {
               </Table>
             </Card>
           )}
-          )}
         </TabsContent>
       </Tabs>
     </div>
