@@ -377,6 +377,10 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">{t("studioBgColor")}</label>
           <div className="flex gap-1.5 flex-wrap">
+            <button className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform relative overflow-hidden" onClick={() => onUpdate({ ...content, bgColor: "transparent" })}
+              style={{ background: "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)", backgroundSize: "8px 8px", backgroundPosition: "0 0, 4px 4px" }}>
+              {(content.bgColor === "transparent" || !content.bgColor) && <div className="absolute inset-0 ring-2 ring-primary rounded-md" />}
+            </button>
             {["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(220 14% 20%)", "hsl(0 0% 100%)", "hsl(280 60% 50%)", "hsl(190 70% 45%)"].map((c) => (
               <button key={c} className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform" style={{ background: c }} onClick={() => onUpdate({ ...content, bgColor: c })} />
             ))}
