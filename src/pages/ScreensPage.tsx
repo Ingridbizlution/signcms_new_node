@@ -119,10 +119,12 @@ export default function ScreensPage() {
           <h1 className="text-2xl font-bold text-foreground">螢幕管理</h1>
           <p className="text-sm text-muted-foreground mt-1">管理所有分店的電子看板設備</p>
         </div>
-        <Button onClick={openAdd} className="gap-2 self-start">
-          <Plus className="w-4 h-4" />
-          新增螢幕
-        </Button>
+        {isAdmin && (
+          <Button onClick={openAdd} className="gap-2 self-start">
+            <Plus className="w-4 h-4" />
+            新增螢幕
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
