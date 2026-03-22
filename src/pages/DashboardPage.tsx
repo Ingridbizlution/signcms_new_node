@@ -114,6 +114,31 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground mt-1">{t("dashSubtitle")}</p>
       </div>
 
+      {/* Emergency Banner */}
+      {emergencyCount > 0 && (
+        <div className="rounded-xl border-2 border-destructive/40 bg-destructive/5 p-4 flex items-center gap-4 animate-pulse shadow-lg shadow-destructive/10">
+          <div className="w-12 h-12 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-7 h-7 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {t("dashEmergencyTitle")}
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {t("dashEmergencyDesc").replace("{count}", String(emergencyCount))}
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            className="shrink-0 gap-2 font-bold"
+            onClick={() => navigate("/publishing")}
+          >
+            {t("dashEmergencyAction")}
+          </Button>
+        </div>
+      )}
+
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard title={t("dashOnlineScreens")} value={onlineCount} icon={<Monitor className="w-5 h-5 text-success" />} subtitle={t("dashRunningNormal")} variant="success" className="opacity-0 animate-count-up stagger-1" />
