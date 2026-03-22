@@ -64,7 +64,22 @@ export default function ScreensPage() {
   const [renameTarget, setRenameTarget] = useState("");
   const [renameValue, setRenameValue] = useState("");
 
-  // Group delete
+  // Screen settings
+  const [settingsScreen, setSettingsScreen] = useState<Screen | null>(null);
+  const [settingsForm, setSettingsForm] = useState({
+    ipMode: "dhcp",
+    ipAddress: "",
+    subnet: "255.255.255.0",
+    gateway: "",
+    dns: "8.8.8.8",
+    ntpServer: "pool.ntp.org",
+    rotation: "0",
+    scheduleEnabled: false,
+    scheduleOn: "08:00",
+    scheduleOff: "22:00",
+  });
+  const [rebootConfirmOpen, setRebootConfirmOpen] = useState(false);
+
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
 
   const fetchScreens = async () => {
