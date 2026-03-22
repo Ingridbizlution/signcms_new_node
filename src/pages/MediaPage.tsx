@@ -769,10 +769,10 @@ const MediaPage = () => {
           </div>
 
           <div className="flex items-center gap-2 self-end lg:self-auto">
-            <Button variant={viewMode === "grid" ? "default" : "outline"} size="icon" onClick={() => setViewMode("grid")}>
+            <Button variant={viewMode === "grid" ? "default" : "outline"} size="icon" onClick={() => setViewMode("grid")} title="Grid">
               <Grid3X3 className="w-4 h-4" />
             </Button>
-            <Button variant={viewMode === "list" ? "default" : "outline"} size="icon" onClick={() => setViewMode("list")}>
+            <Button variant={viewMode === "list" ? "default" : "outline"} size="icon" onClick={() => setViewMode("list")} title="List">
               <List className="w-4 h-4" />
             </Button>
           </div>
@@ -864,11 +864,11 @@ const MediaPage = () => {
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }} title={t("mediaTitle")}>
                   <Eye className="w-4 h-4" />
                 </Button>
                 {isAdmin && !item.is_system && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); requestDelete(item.id); }}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); requestDelete(item.id); }} title={t("mediaDeleteItem")}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
@@ -964,7 +964,7 @@ const MediaPage = () => {
                 placeholder={t("mediaProjectNamePlaceholder")}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateProject()}
               />
-              <Button onClick={handleCreateProject} disabled={!newProjectName.trim()} size="icon" className="shrink-0">
+              <Button onClick={handleCreateProject} disabled={!newProjectName.trim()} size="icon" className="shrink-0" title={t("mediaProjectCreated")}>
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -1000,10 +1000,10 @@ const MediaPage = () => {
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {media.filter((item) => item.design_project_id === project.id).length}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100" onClick={() => { setEditingProject(project); setEditProjectName(project.name); }}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100" onClick={() => { setEditingProject(project); setEditProjectName(project.name); }} title={t("edit")}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 text-destructive hover:text-destructive" onClick={() => setDeleteProjectId(project.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 text-destructive hover:text-destructive" onClick={() => setDeleteProjectId(project.id)} title={t("confirmDelete")}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </>

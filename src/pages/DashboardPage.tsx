@@ -189,7 +189,7 @@ export default function DashboardPage() {
         {/* Screen Online */}
         <Card className="p-4 border-success/20 hover-lift shadow-sm opacity-0 animate-count-up stagger-1">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center" title={t("dashOnlineScreens")}>
               <Monitor className="w-4.5 h-4.5 text-success" />
             </div>
             <Badge variant="outline" className="text-[10px] text-success border-success/30 bg-success/5">LIVE</Badge>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
         {/* Screen Offline */}
         <Card className="p-4 border-destructive/20 hover-lift shadow-sm opacity-0 animate-count-up stagger-2">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center" title={t("dashOfflineWarning")}>
               <WifiOff className="w-4.5 h-4.5 text-destructive" />
             </div>
             {offlineCount > 0 && (
@@ -215,7 +215,7 @@ export default function DashboardPage() {
         {/* Enabled Schedules */}
         <Card className="p-4 hover-lift shadow-sm opacity-0 animate-count-up stagger-3">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center" title={t("dashTotalSchedules")}>
               <CalendarClock className="w-4.5 h-4.5 text-primary" />
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
         {/* Total Media */}
         <Card className="p-4 hover-lift shadow-sm opacity-0 animate-count-up stagger-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center" title={t("dashTotalMedia")}>
               <BarChart3 className="w-4.5 h-4.5 text-primary" />
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function DashboardPage() {
         {/* Today's Publish */}
         <Card className="p-4 hover-lift shadow-sm opacity-0 animate-count-up stagger-5">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center" title={t("dashPublishToday")}>
               <Send className="w-4.5 h-4.5 text-emerald-500" />
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
         {/* Scheduled Pending */}
         <Card className="p-4 hover-lift shadow-sm opacity-0 animate-count-up stagger-6">
           <div className="flex items-center justify-between mb-2">
-            <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center" title={t("dashScheduledPending")}>
               <Clock className="w-4.5 h-4.5 text-amber-500" />
             </div>
             {scheduledCount > 0 && (
@@ -273,6 +273,7 @@ export default function DashboardPage() {
             variant="outline"
             className="h-auto py-3 flex flex-col items-center gap-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all"
             onClick={() => navigate("/publishing")}
+            title={t("dashQuickPublish")}
           >
             <Send className="w-5 h-5 text-primary" />
             <span className="text-xs font-medium">{t("dashQuickPublish")}</span>
@@ -281,6 +282,7 @@ export default function DashboardPage() {
             variant="outline"
             className="h-auto py-3 flex flex-col items-center gap-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all"
             onClick={() => navigate("/screens")}
+            title={t("dashQuickScreen")}
           >
             <Plus className="w-5 h-5 text-primary" />
             <span className="text-xs font-medium">{t("dashQuickScreen")}</span>
@@ -289,6 +291,7 @@ export default function DashboardPage() {
             variant="outline"
             className="h-auto py-3 flex flex-col items-center gap-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all"
             onClick={() => navigate("/media")}
+            title={t("dashQuickMedia")}
           >
             <Upload className="w-5 h-5 text-primary" />
             <span className="text-xs font-medium">{t("dashQuickMedia")}</span>
@@ -297,6 +300,7 @@ export default function DashboardPage() {
             variant="outline"
             className="h-auto py-3 flex flex-col items-center gap-1.5 hover:border-primary/50 hover:bg-primary/5 transition-all"
             onClick={() => navigate("/schedules")}
+            title={t("dashQuickSchedule")}
           >
             <CalendarClock className="w-5 h-5 text-primary" />
             <span className="text-xs font-medium">{t("dashQuickSchedule")}</span>

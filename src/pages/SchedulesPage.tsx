@@ -389,13 +389,13 @@ export default function SchedulesPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {isAdmin && <Switch checked={schedule.enabled} onCheckedChange={() => toggleEnabled(schedule.id, schedule.enabled)} />}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)} title={t("schedPlayOrder")}>
                         {expandedId === schedule.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
                       {isAdmin && (
                         <>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)}><Pencil className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)} title={t("schedEditTitle")}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)} title={t("schedDeleted")}><Trash2 className="w-4 h-4" /></Button>
                         </>
                       )}
                     </div>
@@ -472,10 +472,10 @@ export default function SchedulesPage() {
                       <span className="text-[10px] text-muted-foreground">{t("seconds")}</span>
                     </div>
                     <div className="flex shrink-0">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "up")} disabled={index === 0}><ChevronUp className="w-3 h-3" /></Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "down")} disabled={index === form.items.length - 1}><ChevronDown className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "up")} disabled={index === 0} title="↑"><ChevronUp className="w-3 h-3" /></Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "down")} disabled={index === form.items.length - 1} title="↓"><ChevronDown className="w-3 h-3" /></Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive shrink-0" onClick={() => removeItemFromForm(item.tempId)}><X className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive shrink-0" onClick={() => removeItemFromForm(item.tempId)} title={t("delete")}><X className="w-3 h-3" /></Button>
                   </div>
                 ))}
               </div>

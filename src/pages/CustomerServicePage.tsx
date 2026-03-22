@@ -273,9 +273,9 @@ const CustomerServicePage = () => {
                     )}
                     AI 智慧回覆
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><Video className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" title="撥打電話"><Phone className="h-4 w-4" /></Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" title="視訊通話"><Video className="h-4 w-4" /></Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" title="更多選項"><MoreVertical className="h-4 w-4" /></Button>
                 </div>
 
                 {/* Messages */}
@@ -338,7 +338,7 @@ const CustomerServicePage = () => {
                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground" title="語音轉文字">
                       <Mic className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend}>
+                    <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} title="送出訊息">
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>

@@ -31,7 +31,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 flex items-center justify-between border-b border-border px-4 bg-card/80 backdrop-blur-sm shrink-0 sticky top-0 z-10">
             <div className="flex items-center gap-2">
-              <SidebarTrigger />
+              <SidebarTrigger title={t("navDashboard")} />
               <span className="text-sm font-bold tracking-wide text-foreground hidden sm:inline">
                 {t("appSubtitle")}
               </span>
@@ -41,7 +41,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full w-8 h-8">
+                  <Button variant="ghost" size="icon" className="rounded-full w-8 h-8" title={displayName}>
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={avatarUrl} />
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -55,7 +55,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <p className="font-medium text-foreground">{displayName}</p>
                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                   </div>
-                  <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
+                  <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer" title={t("logout")}>
                     <LogOut className="w-4 h-4 mr-2" />
                     {t("logout")}
                   </DropdownMenuItem>
