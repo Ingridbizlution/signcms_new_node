@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Send, Search, MoreVertical, Phone, Video, Bot, User,
-  Circle, Paperclip, Mic, ImagePlus,
+  Circle, Paperclip, Mic, ImagePlus, Loader2, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { streamKnowledgeChat } from "@/lib/knowledgeChat";
+import { toast } from "sonner";
 
 interface Customer {
   id: string;
@@ -80,10 +81,10 @@ const CustomerServicePage = () => {
   const [inputText, setInputText] = useState("");
   const [searchText, setSearchText] = useState("");
   const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES);
+  const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentMessages = messagesMap[selectedCustomer] || [];
-
   const selected = MOCK_CUSTOMERS.find((c) => c.id === selectedCustomer);
   const filtered = MOCK_CUSTOMERS.filter((c) =>
     c.name.includes(searchText) || c.lastMessage.includes(searchText)
@@ -109,6 +110,51 @@ const CustomerServicePage = () => {
     }));
     setInputText("");
   }, [inputText, selectedCustomer]);
+
+  const handleAIReply = useCallback(async () => {
+    if (streaming) return;
+    const msgs = messagesMap[selectedCustomer] || [];
+    // Build conversation context from customer messages
+    const aiMessages = msgs.map((m) => ({
+      role: (m.sender === "customer" ? "user" : "assistant") as "user" | "assistant",
+      content: m.content,
+    }));
+
+    setStreaming(true);
+    const aiId = Date.now().toString();
+    let aiContent = "";
+
+    await streamKnowledgeChat({
+      messages: aiMessages,
+      onDelta: (chunk) => {
+        aiContent += chunk;
+        setMessagesMap((prev) => {
+          const existing = prev[selectedCustomer] || [];
+          const lastMsg = existing[existing.length - 1];
+          if (lastMsg?.id === aiId) {
+            return {
+              ...prev,
+              [selectedCustomer]: existing.map((m) =>
+                m.id === aiId ? { ...m, content: aiContent } : m
+              ),
+            };
+          }
+          return {
+            ...prev,
+            [selectedCustomer]: [
+              ...existing,
+              { id: aiId, sender: "ai" as const, content: aiContent, time: now() },
+            ],
+          };
+        });
+      },
+      onDone: () => setStreaming(false),
+      onError: (msg) => {
+        toast.error(msg);
+        setStreaming(false);
+      },
+    });
+  }, [messagesMap, selectedCustomer, streaming]);
 
   return (
     <DashboardLayout>
@@ -213,6 +259,20 @@ const CustomerServicePage = () => {
                       {selected.channel === "ai" ? "AI 智慧助手對話中" : "真人客服對話中"}
                     </p>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleAIReply}
+                    disabled={streaming}
+                  >
+                    {streaming ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    AI 智慧回覆
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8"><Video className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
@@ -247,6 +307,15 @@ const CustomerServicePage = () => {
                         </div>
                       );
                     })}
+                    {streaming && (
+                      <div className="flex gap-2 justify-start">
+                        <Avatar className="h-7 w-7 mt-1">
+                          <AvatarFallback className="bg-primary/20 text-primary text-xs">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
 

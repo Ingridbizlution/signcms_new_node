@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  MessageCircle, X, Send, Mic, Paperclip, Bot, User, Minimize2,
+  MessageCircle, X, Send, Mic, Paperclip, Bot, User, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { streamKnowledgeChat } from "@/lib/knowledgeChat";
+import { toast } from "sonner";
 
 interface ChatMsg {
   id: string;
@@ -22,6 +23,7 @@ const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const [isAI, setIsAI] = useState(true);
   const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: "0", role: "assistant", content: "您好！我是 AI 智慧助手 🤖\n有任何問題都可以詢問我，也可以切換到真人客服。", time: now() },
   ]);
@@ -33,31 +35,55 @@ const ChatWidget = () => {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || streaming) return;
     const userMsg: ChatMsg = { id: Date.now().toString(), role: "user", content: input, time: now() };
-    setMessages((p) => [...p, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
 
-    // Mock reply
-    setTimeout(() => {
-      setMessages((p) => [
-        ...p,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: isAI
-            ? "感謝您的提問！我正在查詢相關知識庫資料，請稍候..."
-            : "客服人員正在處理您的請求，請稍候片刻。",
-          time: now(),
-        },
-      ]);
-    }, 800);
+    if (!isAI) {
+      // Human agent mock reply
+      setTimeout(() => {
+        setMessages((p) => [
+          ...p,
+          { id: (Date.now() + 1).toString(), role: "assistant", content: "客服人員正在處理您的請求，請稍候片刻。", time: now() },
+        ]);
+      }, 800);
+      return;
+    }
+
+    // AI streaming response
+    setStreaming(true);
+    let assistantContent = "";
+    const assistantId = (Date.now() + 1).toString();
+
+    const aiMessages = updatedMessages
+      .filter((m) => m.id !== "0")
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    await streamKnowledgeChat({
+      messages: aiMessages,
+      onDelta: (chunk) => {
+        assistantContent += chunk;
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.id === assistantId) {
+            return prev.map((m) => (m.id === assistantId ? { ...m, content: assistantContent } : m));
+          }
+          return [...prev, { id: assistantId, role: "assistant", content: assistantContent, time: now() }];
+        });
+      },
+      onDone: () => setStreaming(false),
+      onError: (msg) => {
+        toast.error(msg);
+        setStreaming(false);
+      },
+    });
   };
 
   return (
     <>
-      {/* Floating button */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
@@ -67,7 +93,6 @@ const ChatWidget = () => {
         </button>
       )}
 
-      {/* Chat window */}
       {open && (
         <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[540px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
           {/* Header */}
@@ -79,7 +104,9 @@ const ChatWidget = () => {
               <h4 className="text-sm font-semibold text-primary-foreground">
                 {isAI ? "AI 智慧助手" : "真人客服"}
               </h4>
-              <p className="text-xs text-primary-foreground/70">隨時為您服務</p>
+              <p className="text-xs text-primary-foreground/70">
+                {isAI ? "根據知識庫智慧回答" : "隨時為您服務"}
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -124,6 +151,15 @@ const ChatWidget = () => {
                 </div>
               </div>
             ))}
+            {streaming && (
+              <div className="flex gap-2 justify-start">
+                <Avatar className="h-7 w-7 mt-1 shrink-0">
+                  <AvatarFallback className="bg-primary/15 text-primary">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            )}
           </div>
 
           {/* Input area */}
@@ -138,12 +174,13 @@ const ChatWidget = () => {
                 onChange={(e) => setInput(e.target.value)}
                 className="flex-1 h-9 text-sm bg-muted/50 border-0"
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                disabled={streaming}
               />
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground" title="語音轉文字">
                 <Mic className="h-4 w-4" />
               </Button>
-              <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleSend}>
-                <Send className="h-3.5 w-3.5" />
+              <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleSend} disabled={streaming}>
+                {streaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               </Button>
             </div>
           </div>
