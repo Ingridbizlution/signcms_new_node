@@ -268,6 +268,35 @@ const AnnouncementPage = () => {
                 </Select>
               </div>
 
+              {/* Category */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">{t("categoryLabel")}</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-12 text-base">
+                    <SelectValue placeholder={t("categoryPh")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value} className="text-base">
+                        {c.label[language]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Pinned */}
+              <div className="flex items-center justify-between rounded-xl border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    <Pin className="h-4 w-4 text-amber-500" />
+                    {t("pinnedLabel")}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">{t("pinnedDesc")}</p>
+                </div>
+                <Switch checked={pinned} onCheckedChange={setPinned} />
+              </div>
+
               {/* Content */}
               <div className="space-y-2">
                 <Label className="text-base font-semibold">{t("contentLabel")}</Label>
