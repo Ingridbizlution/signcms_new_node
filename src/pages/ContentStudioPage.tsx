@@ -931,10 +931,10 @@ export default function ContentStudioPage() {
               const mediaItems = overlay.content?.mediaItems || [];
               return (
                 <div key={overlay.id}
-                  className={`absolute cursor-move flex items-center justify-center overflow-hidden rounded-lg ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1" : "hover:ring-1 hover:ring-accent-foreground/50"}`}
+                  className={`absolute flex items-center justify-center overflow-hidden rounded-lg ${overlay.locked ? "cursor-default" : "cursor-move"} ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1" : "hover:ring-1 hover:ring-accent-foreground/50"}`}
                   style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg, opacity: (overlay.opacity ?? 100) / 100, zIndex: 30 + (overlay.zIndex ?? 0) + (isSelected ? 10 : 0) }}
                   onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
-                  onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
+                  onMouseDown={(e) => { if (overlay.locked) return; if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
                 >
                   {/* Content render */}
                   {overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
