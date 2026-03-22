@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Loader2, Wifi, WifiOff, Settings, CalendarClock, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2, Wifi, WifiOff, Settings, CalendarClock, AlertTriangle, RefreshCw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
