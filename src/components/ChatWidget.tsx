@@ -71,7 +71,7 @@ const ChatWidget = () => {
       {open && (
         <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[540px] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
           {/* Header */}
-          <div className="bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-3 flex items-center gap-3">
+          <div className="bg-gradient-to-r from-primary to-primary/80 px-4 py-3 flex items-center gap-3">
             <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center">
               {isAI ? <Bot className="h-5 w-5 text-white" /> : <User className="h-5 w-5 text-white" />}
             </div>
