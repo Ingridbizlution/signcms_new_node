@@ -3,7 +3,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/announcement/RichTextEditor";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -160,7 +160,7 @@ const AnnouncementPage = () => {
   };
 
   const handlePublish = () => {
-    if (!subject.trim() || !content.trim() || !startDate || !endDate) {
+    if (!subject.trim() || !content || content === "<p></p>" || !startDate || !endDate) {
       toast.error(t("errorFill"));
       return;
     }
@@ -225,7 +225,7 @@ const AnnouncementPage = () => {
 
   const saveEditing = () => {
     if (!editingAnnouncement) return;
-    if (!editSubject.trim() || !editContent.trim() || !editStartDate || !editEndDate) {
+    if (!editSubject.trim() || !editContent || editContent === "<p></p>" || !editStartDate || !editEndDate) {
       toast.error(t("errorFill"));
       return;
     }
@@ -284,7 +284,7 @@ const AnnouncementPage = () => {
     });
   }, [announcements]);
 
-  const hasContent = subject || content || imageUrl;
+  const hasContent = subject || (content && content !== "<p></p>") || imageUrl;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -377,11 +377,11 @@ const AnnouncementPage = () => {
               {/* Content */}
               <div className="space-y-2">
                 <Label className="text-base font-semibold">{t("contentLabel")}</Label>
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                <RichTextEditor
+                  content={content}
+                  onChange={setContent}
                   placeholder={t("contentPh")}
-                  className="min-h-[140px] text-base leading-relaxed"
+                  minHeight="160px"
                 />
               </div>
 
@@ -527,12 +527,13 @@ const AnnouncementPage = () => {
                         )}>
                           {subject || "…"}
                         </h3>
-                        <p className={cn(
-                          "text-white/80 leading-relaxed line-clamp-4",
-                          previewMode === "landscape" ? "text-sm" : "text-xs"
-                        )}>
-                          {content || "…"}
-                        </p>
+                        <div
+                          className={cn(
+                            "text-white/80 leading-relaxed line-clamp-4 prose prose-sm prose-invert",
+                            previewMode === "landscape" ? "text-sm" : "text-xs"
+                          )}
+                          dangerouslySetInnerHTML={{ __html: content || "<p>…</p>" }}
+                        />
                         {startDate && endDate && (
                           <p className="text-white/50 text-[10px] mt-3">
                             {format(startDate, "MM/dd")} – {format(endDate, "MM/dd")}
@@ -683,7 +684,12 @@ const AnnouncementPage = () => {
             {/* Content */}
             <div className="space-y-2">
               <Label className="text-base font-semibold">{t("contentLabel")}</Label>
-              <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder={t("contentPh")} className="min-h-[120px] text-base leading-relaxed" />
+              <RichTextEditor
+                content={editContent}
+                onChange={setEditContent}
+                placeholder={t("contentPh")}
+                minHeight="120px"
+              />
             </div>
 
             {/* Image */}
