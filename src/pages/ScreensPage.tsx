@@ -55,6 +55,7 @@ const initialScreens: Screen[] = [
 const emptyForm = { name: "", branch: "", location: "", resolution: "1920×1080" };
 
 export default function ScreensPage() {
+  const { isAdmin } = useUserRole();
   const [screens, setScreens] = useState<Screen[]>(initialScreens);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
