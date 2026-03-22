@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush, FileText, Radio, Wifi, Cable, ArrowUpDown } from "lucide-react";
+import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush, FileText, Radio, Wifi, Cable, ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScreenLogPanel } from "@/components/ScreenLogPanel";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const UNGROUPED = "__ungrouped__";
 
@@ -95,6 +96,24 @@ export default function ScreensPage() {
   const [rebootConfirmOpen, setRebootConfirmOpen] = useState(false);
   const [mediaOptions, setMediaOptions] = useState<{ id: string; name: string; type: string }[]>([]);
   const [designOptions, setDesignOptions] = useState<{ id: string; name: string }[]>([]);
+
+  // Network speed thresholds (persisted in localStorage)
+  const [uploadThreshold, setUploadThreshold] = useState(() => {
+    const saved = localStorage.getItem("screen_upload_threshold");
+    return saved ? parseFloat(saved) : 10;
+  });
+  const [downloadThreshold, setDownloadThreshold] = useState(() => {
+    const saved = localStorage.getItem("screen_download_threshold");
+    return saved ? parseFloat(saved) : 20;
+  });
+
+  const saveThresholds = (up: number, down: number) => {
+    setUploadThreshold(up);
+    setDownloadThreshold(down);
+    localStorage.setItem("screen_upload_threshold", String(up));
+    localStorage.setItem("screen_download_threshold", String(down));
+    toast.success("閾值已更新");
+  };
 
   // IoT extension
   const [iotScreen, setIotScreen] = useState<Screen | null>(null);
@@ -286,6 +305,55 @@ export default function ScreensPage() {
             {groups.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" title="網路速度閾值設定">
+              <SlidersHorizontal className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72" align="end">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
+                <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={uploadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(v, downloadThreshold);
+                    }}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">下載速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={downloadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(uploadThreshold, v);
+                    }}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                <span className="w-2 h-2 rounded-full bg-success" /> 正常
+                <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Group chips */}
@@ -395,8 +463,8 @@ export default function ScreensPage() {
                     };
                     const up = parseSpeed(screen.avg_upload_speed);
                     const down = parseSpeed(screen.avg_download_speed);
-                    const UPLOAD_THRESHOLD = 10; // Mbps
-                    const DOWNLOAD_THRESHOLD = 20; // Mbps
+                    const UPLOAD_THRESHOLD = uploadThreshold;
+                    const DOWNLOAD_THRESHOLD = downloadThreshold;
                     const hasData = up !== null || down !== null;
                     const isUpLow = up !== null && up < UPLOAD_THRESHOLD;
                     const isDownLow = down !== null && down < DOWNLOAD_THRESHOLD;
