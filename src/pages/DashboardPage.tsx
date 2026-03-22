@@ -98,7 +98,7 @@ export default function DashboardPage() {
     const items = scheduleItems.filter((si) => si.schedule_id === s.id);
     const totalDuration = items.reduce((sum: number, i: any) => sum + (i.duration || 0), 0);
     const screen = screenMap.get(s.screen_id);
-    return { ...s, itemCount: items.length, totalDuration, screenName: screen ? `${screen.branch} - ${screen.name}` : "-" };
+    return { ...s, itemCount: items.length, totalDuration, screenName: screen ? `${screen.branch || t("screensUngrouped")} - ${screen.name}` : "-" };
   });
 
   return (
