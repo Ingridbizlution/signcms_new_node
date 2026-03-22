@@ -351,6 +351,8 @@ export default function MediaPage() {
     countdownTitle: "",
     youtubeUrl: "",
     city: "Taipei",
+    fontSize: "medium" as "small" | "medium" | "large" | "xlarge",
+    qrcodeSize: 140,
   };
   const [widgetForm, setWidgetForm] = useState(defaultWidgetForm);
 
