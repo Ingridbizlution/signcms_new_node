@@ -116,6 +116,9 @@ const AnnouncementPage = () => {
     deleted: { zh: "已刪除公告", en: "Announcement deleted", ja: "お知らせを削除しました" },
     pinnedTag: { zh: "📌 置頂", en: "📌 Pinned", ja: "📌 固定" },
     successEdit: { zh: "公告已更新", en: "Announcement updated", ja: "お知らせを更新しました" },
+    editTitle: { zh: "編輯公告", en: "Edit Announcement", ja: "お知らせを編集" },
+    cancelBtn: { zh: "取消", en: "Cancel", ja: "キャンセル" },
+    saveBtn: { zh: "儲存變更", en: "Save Changes", ja: "変更を保存" },
   };
 
   const t = (key: keyof typeof texts) => texts[key][language];
