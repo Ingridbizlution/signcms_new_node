@@ -106,7 +106,7 @@ export function KnowledgeFilePanel({ knowledgeItemId, itemTitle }: Props) {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      title="檢視"
+                      title={t("tipView")}
                       onClick={() => window.open(getFileUrl(file.storage_path), "_blank")}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -115,7 +115,7 @@ export function KnowledgeFilePanel({ knowledgeItemId, itemTitle }: Props) {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive"
-                      title="刪除"
+                      title={t("delete")}
                       onClick={() => deleteFile(file)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />

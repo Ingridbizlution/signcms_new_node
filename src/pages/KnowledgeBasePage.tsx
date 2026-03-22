@@ -191,13 +191,13 @@ const KnowledgeBasePage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="上傳文件" onClick={() => setFileItem(item)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("tipUploadFile")} onClick={() => setFileItem(item)}>
                           <Upload className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="編輯">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title={t("edit")}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="刪除" onClick={() => deleteItem(item.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title={t("delete")} onClick={() => deleteItem(item.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
