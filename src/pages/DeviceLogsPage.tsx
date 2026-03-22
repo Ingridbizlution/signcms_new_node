@@ -105,9 +105,15 @@ export default function DeviceLogsPage() {
           <h1 className="text-2xl font-bold text-foreground">{labels.title[language]}</h1>
           <p className="text-sm text-muted-foreground mt-1">{labels.subtitle[language]}</p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2 self-start" onClick={fetchData}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-2 self-start">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExportExcel} disabled={filtered.length === 0}>
+            <Download className="w-4 h-4" />
+            {labels.exportExcel[language]}
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={fetchData}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
