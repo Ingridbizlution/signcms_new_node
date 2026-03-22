@@ -118,6 +118,10 @@ export default function SystemLogsPage() {
   const [activityPage, setActivityPage] = useState(1);
   const ACTIVITY_PAGE_SIZE = 50;
 
+  // --- Playback reports state ---
+  const [playbackLogs, setPlaybackLogs] = useState<{ id: string; media_name: string; duration_seconds: number; played_at: string; org_id: string | null }[]>([]);
+  const [playbackLoading, setPlaybackLoading] = useState(true);
+
   // --- Shared ---
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
 
