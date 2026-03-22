@@ -155,7 +155,7 @@ export default function SchedulesPage() {
           };
         });
       return {
-        id: s.id, name: s.name, screen_id: s.screen_id,
+        id: s.id, name: s.name, org_id: s.org_id || null, screen_id: s.screen_id,
         screen_label: screenMap.get(s.screen_id) || "",
         start_time: s.start_time, end_time: s.end_time,
         days: s.days || [], enabled: s.enabled, items: schedItems,
