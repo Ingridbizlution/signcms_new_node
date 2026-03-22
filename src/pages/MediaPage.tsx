@@ -942,32 +942,34 @@ export default function MediaPage() {
             {/* Live Preview */}
             <div className="space-y-2">
               <Label>{t("mediaPreviewUnavailable").replace("（範例素材）", "").replace("(sample)", "Preview")}</Label>
-              <div className="aspect-video rounded-lg overflow-hidden border border-border">
-                <AnimatedWidgetWrapper config={{
-                  animation: widgetForm.animation,
-                  widgetType: widgetForm.widgetType,
-                }}>
-                  <WidgetLivePreview config={{
-                    widgetType: widgetForm.widgetType,
-                    url: widgetForm.url,
-                    text: widgetForm.text,
-                    speed: widgetForm.speed,
-                    format: widgetForm.format,
-                    clockStyle: widgetForm.clockStyle,
-                    showDate: widgetForm.showDate,
-                    timezone: widgetForm.timezone,
-                    bgColor: widgetForm.bgColor,
-                    textColor: widgetForm.textColor,
-                    qrcodeContent: widgetForm.qrcodeContent,
-                    targetDate: widgetForm.targetDate,
-                    countdownTitle: widgetForm.countdownTitle,
-                    youtubeUrl: widgetForm.youtubeUrl,
-                    city: widgetForm.city,
-                    fontSize: widgetForm.fontSize,
-                    qrcodeSize: widgetForm.qrcodeSize,
+              <div className="aspect-video rounded-lg overflow-hidden border border-border bg-muted/30 shrink-0">
+                <div className="w-full h-full overflow-hidden">
+                  <AnimatedWidgetWrapper config={{
                     animation: widgetForm.animation,
-                  }} />
-                </AnimatedWidgetWrapper>
+                    widgetType: widgetForm.widgetType,
+                  }}>
+                    <WidgetLivePreview config={{
+                      widgetType: widgetForm.widgetType,
+                      url: widgetForm.url,
+                      text: widgetForm.text,
+                      speed: widgetForm.speed,
+                      format: widgetForm.format,
+                      clockStyle: widgetForm.clockStyle,
+                      showDate: widgetForm.showDate,
+                      timezone: widgetForm.timezone,
+                      bgColor: widgetForm.bgColor,
+                      textColor: widgetForm.textColor,
+                      qrcodeContent: widgetForm.qrcodeContent,
+                      targetDate: widgetForm.targetDate,
+                      countdownTitle: widgetForm.countdownTitle,
+                      youtubeUrl: widgetForm.youtubeUrl,
+                      city: widgetForm.city,
+                      fontSize: widgetForm.fontSize,
+                      qrcodeSize: widgetForm.qrcodeSize,
+                      animation: widgetForm.animation,
+                    }} />
+                  </AnimatedWidgetWrapper>
+                </div>
               </div>
             </div>
           </div>
