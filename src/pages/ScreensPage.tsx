@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush, FileText } from "lucide-react";
+import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw, Eye, Moon, Play, Brush, FileText, Radio } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -90,6 +90,15 @@ export default function ScreensPage() {
   const [rebootConfirmOpen, setRebootConfirmOpen] = useState(false);
   const [mediaOptions, setMediaOptions] = useState<{ id: string; name: string; type: string }[]>([]);
   const [designOptions, setDesignOptions] = useState<{ id: string; name: string }[]>([]);
+
+  // IoT extension
+  const [iotScreen, setIotScreen] = useState<Screen | null>(null);
+  const [iotDevices, setIotDevices] = useState<{ id: string; name: string; type: string; status: string }[]>([
+    { id: "1", name: "空氣品質偵測器 AQ-01", type: "air_quality", status: "online" },
+    { id: "2", name: "地震發報器 EQ-03", type: "earthquake", status: "offline" },
+  ]);
+  const [addIotOpen, setAddIotOpen] = useState(false);
+  const [newIotDevice, setNewIotDevice] = useState({ name: "", type: "air_quality" });
 
   // Fetch media & design projects for default playback selector
   useEffect(() => {
@@ -354,6 +363,7 @@ export default function ScreensPage() {
               {isAdmin && (
                 <div className="flex items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(t("screenLiveViewPlaceholder"))} title={t("screenLiveView")}><Eye className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIotScreen(screen)} title="IoT 擴充裝置"><Radio className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSettingsScreen(screen)} title={t("screenSettings")}><Settings className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}><Pencil className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}><Trash2 className="w-4 h-4" /></Button>
@@ -760,6 +770,147 @@ export default function ScreensPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* IoT Extension Dialog */}
+      <Dialog open={!!iotScreen} onOpenChange={(open) => { if (!open) setIotScreen(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radio className="w-5 h-5 text-primary" />
+              IoT 擴充裝置管理
+            </DialogTitle>
+          </DialogHeader>
+          {iotScreen && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                螢幕「{iotScreen.name}」的 IoT 擴充裝置設定。連接感測器後，螢幕可即時顯示環境數據或緊急發報資訊。
+              </p>
+
+              {/* Connected devices */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-foreground">已連接裝置</h4>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setAddIotOpen(true)}>
+                    <Plus className="w-3.5 h-3.5" /> 新增裝置
+                  </Button>
+                </div>
+                {iotDevices.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground border border-dashed border-border rounded-lg">
+                    <Radio className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">尚未連接任何 IoT 裝置</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {iotDevices.map((device) => {
+                      const typeConfig: Record<string, { label: string; icon: string; color: string }> = {
+                        air_quality: { label: "空氣品質偵測", icon: "🌬️", color: "border-blue-500/30 bg-blue-500/5" },
+                        earthquake: { label: "地震發報器", icon: "🔔", color: "border-orange-500/30 bg-orange-500/5" },
+                        fire: { label: "火災發報器", icon: "🔥", color: "border-red-500/30 bg-red-500/5" },
+                        temperature: { label: "溫濕度感測", icon: "🌡️", color: "border-emerald-500/30 bg-emerald-500/5" },
+                        noise: { label: "噪音偵測", icon: "🔊", color: "border-purple-500/30 bg-purple-500/5" },
+                      };
+                      const cfg = typeConfig[device.type] || { label: device.type, icon: "📡", color: "border-border bg-muted/30" };
+                      return (
+                        <div key={device.id} className={`flex items-center gap-3 p-3 rounded-lg border ${cfg.color}`}>
+                          <span className="text-xl">{cfg.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{device.name}</p>
+                            <p className="text-xs text-muted-foreground">{cfg.label}</p>
+                          </div>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            device.status === "online" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${device.status === "online" ? "bg-success" : "bg-destructive"}`} />
+                            {device.status === "online" ? "連線中" : "離線"}
+                          </span>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                            setIotDevices((prev) => prev.filter((d) => d.id !== device.id));
+                            toast.success("裝置已移除");
+                          }}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Supported device types */}
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-2">支援裝置類型</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { icon: "🌬️", label: "空氣品質偵測器", desc: "PM2.5、CO2、溫濕度" },
+                    { icon: "🔔", label: "地震發報器", desc: "震度偵測與即時警報" },
+                    { icon: "🔥", label: "火災發報器", desc: "煙霧與熱感偵測" },
+                    { icon: "🌡️", label: "溫濕度感測器", desc: "環境溫度與濕度監控" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/50 text-xs">
+                      <span className="text-base">{item.icon}</span>
+                      <div>
+                        <p className="font-medium text-foreground">{item.label}</p>
+                        <p className="text-muted-foreground">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add IoT Device Dialog */}
+      <Dialog open={addIotOpen} onOpenChange={setAddIotOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>新增 IoT 裝置</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>裝置名稱</Label>
+              <Input
+                value={newIotDevice.name}
+                onChange={(e) => setNewIotDevice((p) => ({ ...p, name: e.target.value }))}
+                placeholder="例如：一樓大廳空氣偵測器"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>裝置類型</Label>
+              <Select value={newIotDevice.type} onValueChange={(v) => setNewIotDevice((p) => ({ ...p, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="air_quality">🌬️ 空氣品質偵測器</SelectItem>
+                  <SelectItem value="earthquake">🔔 地震發報器</SelectItem>
+                  <SelectItem value="fire">🔥 火災發報器</SelectItem>
+                  <SelectItem value="temperature">🌡️ 溫濕度感測器</SelectItem>
+                  <SelectItem value="noise">🔊 噪音偵測器</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddIotOpen(false)}>取消</Button>
+            <Button
+              disabled={!newIotDevice.name.trim()}
+              onClick={() => {
+                setIotDevices((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), name: newIotDevice.name.trim(), type: newIotDevice.type, status: "online" },
+                ]);
+                toast.success("IoT 裝置已新增");
+                setNewIotDevice({ name: "", type: "air_quality" });
+                setAddIotOpen(false);
+              }}
+            >
+              新增
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
