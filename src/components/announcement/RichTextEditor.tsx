@@ -244,13 +244,13 @@ const RichTextEditor = ({ content, onChange, placeholder, minHeight = "160px" }:
         <div className="w-px h-6 bg-border mx-1" />
 
         {/* Alignment */}
-        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Align Left">
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title={t("tipAlignLeft")}>
           <AlignLeft className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Align Center">
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title={t("tipAlignCenter")}>
           <AlignCenter className="h-4 w-4" />
         </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Align Right">
+        <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title={t("tipAlignRight")}>
           <AlignRight className="h-4 w-4" />
         </ToolbarButton>
 
