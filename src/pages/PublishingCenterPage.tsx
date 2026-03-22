@@ -436,7 +436,7 @@ export default function PublishingCenterPage() {
             <label htmlFor="select-all" className="text-sm font-medium text-foreground cursor-pointer">
               {t("publishSelectAll")}
             </label>
-            <span className="text-xs text-muted-foreground ml-auto">{screens.length} {t("publishScreensTotal")}</span>
+            <span className="text-xs text-muted-foreground ml-auto">{filteredScreens.length} {t("publishScreensTotal")}</span>
           </div>
           <Separator />
           <div className="space-y-3 max-h-[340px] overflow-y-auto">
