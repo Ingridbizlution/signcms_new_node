@@ -39,6 +39,7 @@ interface PlaylistItem {
 interface Schedule {
   id: string;
   name: string;
+  org_id: string | null;
   screen_id: string;
   screen_label: string;
   start_time: string;
