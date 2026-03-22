@@ -33,10 +33,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="gap-2 transition-transform duration-200 hover:scale-105">
-                <Upload className="w-4 h-4" />
-                上傳素材
-              </Button>
+              {isAdmin && (
+                <Button size="sm" className="gap-2 transition-transform duration-200 hover:scale-105">
+                  <Upload className="w-4 h-4" />
+                  上傳素材
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full w-8 h-8">
