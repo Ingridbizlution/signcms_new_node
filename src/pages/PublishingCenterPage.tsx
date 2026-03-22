@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import {
   Send, CalendarClock, Monitor, CheckCircle2, Clock, Loader2,
-  Play, Zap, Calendar as CalendarIcon, ListMusic,
+  Play, Zap, Calendar as CalendarIcon, ListMusic, Building2,
   CheckCheck, Search, AlertTriangle, ShieldAlert, X, Layers, RotateCcw,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
