@@ -164,29 +164,56 @@ const AnnouncementPage = () => {
     setEndDate(undefined);
   };
 
-  // Editing state for list items
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCategory, setEditCategory] = useState("");
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [editSubject, setEditSubject] = useState("");
   const [editDepartment, setEditDepartment] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editPinned, setEditPinned] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState<string | null>(null);
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>();
+  const [editEndDate, setEditEndDate] = useState<Date | undefined>();
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const startEditing = (a: Announcement) => {
-    setEditingId(a.id);
-    setEditCategory(a.category);
+    setEditingAnnouncement(a);
+    setEditSubject(a.subject);
     setEditDepartment(a.department);
+    setEditCategory(a.category);
+    setEditPinned(a.pinned);
+    setEditContent(a.content);
+    setEditImageUrl(a.imageUrl);
+    setEditStartDate(a.startDate);
+    setEditEndDate(a.endDate);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditImageUpload = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => setEditImageUrl(e.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const saveEditing = () => {
-    if (!editingId) return;
+    if (!editingAnnouncement) return;
+    if (!editSubject.trim() || !editContent.trim() || !editStartDate || !editEndDate) {
+      toast.error(t("errorFill"));
+      return;
+    }
     const updated = announcements.map((a) =>
-      a.id === editingId ? { ...a, category: editCategory, department: editDepartment } : a
+      a.id === editingAnnouncement.id
+        ? { ...a, subject: editSubject, department: editDepartment, category: editCategory, pinned: editPinned, content: editContent, imageUrl: editImageUrl, startDate: editStartDate, endDate: editEndDate }
+        : a
     );
     setAnnouncements(updated);
     localStorage.setItem("signboard-announcements", JSON.stringify(updated));
-    setEditingId(null);
+    setEditDialogOpen(false);
+    setEditingAnnouncement(null);
     toast.success(texts.successEdit[language]);
   };
-
-  const cancelEditing = () => setEditingId(null);
 
   const handleDelete = (id: string) => {
     const updated = announcements.filter((a) => a.id !== id);
