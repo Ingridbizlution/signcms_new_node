@@ -36,6 +36,7 @@ const CATEGORIES = [
 ];
 
 const KnowledgeBasePage = () => {
+  const { t } = useLanguage();
   const { items, loading, addItem, deleteItem, syncAll, refetch } = useKnowledgeItems();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
