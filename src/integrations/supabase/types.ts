@@ -344,6 +344,54 @@ export type Database = {
           },
         ]
       }
+      screen_logs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_detail: string | null
+          event_title: string
+          event_type: string
+          id: string
+          org_id: string | null
+          screen_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_detail?: string | null
+          event_title: string
+          event_type?: string
+          id?: string
+          org_id?: string | null
+          screen_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_detail?: string | null
+          event_title?: string
+          event_type?: string
+          id?: string
+          org_id?: string | null
+          screen_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screen_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "screen_logs_screen_id_fkey"
+            columns: ["screen_id"]
+            isOneToOne: false
+            referencedRelation: "screens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       screens: {
         Row: {
           branch: string
