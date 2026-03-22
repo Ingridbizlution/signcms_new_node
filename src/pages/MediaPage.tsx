@@ -860,7 +860,7 @@ const MediaPage = () => {
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}>
                   <Eye className="w-4 h-4" />
                 </Button>
-                {isAdmin && (
+                {isAdmin && !item.is_system && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); requestDelete(item.id); }}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
