@@ -547,6 +547,32 @@ const MediaPage = () => {
     }
   };
 
+  const handleCreateWidget = async () => {
+    if (!widgetForm.name.trim()) { toast.error(t("widgetFillRequired")); return; }
+    const config: WidgetConfig = {
+      widgetType: widgetForm.widgetType, url: widgetForm.url, text: widgetForm.text,
+      speed: widgetForm.speed, format: widgetForm.format, clockStyle: widgetForm.clockStyle,
+      showDate: widgetForm.showDate, timezone: widgetForm.timezone, bgColor: widgetForm.bgColor,
+      textColor: widgetForm.textColor, qrcodeContent: widgetForm.qrcodeContent,
+      targetDate: widgetForm.targetDate, countdownTitle: widgetForm.countdownTitle,
+      youtubeUrl: widgetForm.youtubeUrl, city: widgetForm.city, fontSize: widgetForm.fontSize,
+      qrcodeSize: widgetForm.qrcodeSize, animation: widgetForm.animation,
+    };
+    const { error } = await (supabase as any).from("media_items").insert({
+      name: widgetForm.name.trim(), type: "widget",
+      url: "widget://" + JSON.stringify(config),
+      thumbnail: "", size: "-", dimensions: "auto",
+      uploaded_by: user?.id,
+      design_project_id: widgetForm.projectId !== NONE_PROJECT_VALUE ? widgetForm.projectId : null,
+    });
+    if (error) { toast.error(error.message); } else {
+      toast.success(t("widgetCreated"));
+      setWidgetDialogOpen(false);
+      setWidgetForm({ ...defaultWidgetForm });
+      fetchMedia();
+    }
+  };
+
   const renderProjectSelect = (item: MediaItemRow, compact = false) => {
     if (!isAdmin) {
       return (
