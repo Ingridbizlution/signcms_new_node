@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           detail: string | null
           id: string
+          ip_address: string | null
           org_id: string | null
           target_id: string | null
           target_name: string | null
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          ip_address?: string | null
           org_id?: string | null
           target_id?: string | null
           target_name?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           created_at?: string
           detail?: string | null
           id?: string
+          ip_address?: string | null
           org_id?: string | null
           target_id?: string | null
           target_name?: string | null
