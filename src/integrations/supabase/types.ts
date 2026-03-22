@@ -156,6 +156,58 @@ export type Database = {
           },
         ]
       }
+      iot_sensor_readings: {
+        Row: {
+          device_id: string
+          id: string
+          org_id: string | null
+          recorded_at: string
+          screen_id: string
+          unit: string
+          value: number
+        }
+        Insert: {
+          device_id: string
+          id?: string
+          org_id?: string | null
+          recorded_at?: string
+          screen_id: string
+          unit?: string
+          value: number
+        }
+        Update: {
+          device_id?: string
+          id?: string
+          org_id?: string | null
+          recorded_at?: string
+          screen_id?: string
+          unit?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iot_sensor_readings_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "iot_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iot_sensor_readings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "iot_sensor_readings_screen_id_fkey"
+            columns: ["screen_id"]
+            isOneToOne: false
+            referencedRelation: "screens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_files: {
         Row: {
           created_at: string
