@@ -98,10 +98,10 @@ export default function TeamManagement() {
     const payload = { name: name.trim(), org_id: orgId, permissions: perms };
     if (editTeam) {
       const { error } = await supabase.from("teams").update(payload).eq("id", editTeam.id);
-      if (error) toast.error(error.message); else { toast.success(t("teamUpdated")); fetchData(); }
+      if (error) toast.error(error.message); else { toast.success(t("teamUpdated")); logActivity({ action: "編輯團隊", category: "admin", targetName: teamName.trim(), targetId: editTeam.id }); fetchData(); }
     } else {
       const { error } = await supabase.from("teams").insert(payload);
-      if (error) toast.error(error.message); else { toast.success(t("teamCreated")); fetchData(); }
+      if (error) toast.error(error.message); else { toast.success(t("teamCreated")); logActivity({ action: "新增團隊", category: "admin", targetName: teamName.trim() }); fetchData(); }
     }
     setSaving(false); setDialogOpen(false);
   };
