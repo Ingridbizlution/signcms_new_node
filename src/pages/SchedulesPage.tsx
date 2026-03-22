@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarClock, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown,
-  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2,
+  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -21,11 +22,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+type PlaylistItemType = "media" | "design_project";
+
 interface PlaylistItem {
   id: string;
-  media_id: string;
-  media_name: string;
-  media_type: "image" | "video";
+  media_id: string | null;
+  design_project_id: string | null;
+  item_type: PlaylistItemType;
+  item_name: string;
+  item_sub_type: "image" | "video" | "design";
   duration: number;
   sort_order: number;
 }
@@ -53,11 +58,19 @@ interface MediaOption {
   type: "image" | "video";
 }
 
+interface DesignProjectOption {
+  id: string;
+  name: string;
+  aspect: string;
+}
+
 interface FormPlaylistItem {
   tempId: number;
-  media_id: string;
-  media_name: string;
-  media_type: "image" | "video";
+  media_id: string | null;
+  design_project_id: string | null;
+  item_type: PlaylistItemType;
+  item_name: string;
+  item_sub_type: "image" | "video" | "design";
   duration: number;
 }
 
