@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Image, Upload, Trash2, Search, Grid3X3, List, Eye, FileImage, FileVideo, Clock, HardDrive, Loader2,
-  Code2, Calendar, Globe, Type, Plus, CloudSun, QrCode, Timer, Youtube,
+  Code2, Calendar, Globe, Type, Plus, CloudSun, QrCode, Timer, Youtube, FolderOpen,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card } from "@/components/ui/card";
@@ -58,6 +58,12 @@ interface MediaItem {
   dimensions: string;
   duration?: string;
   created_at: string;
+  design_project_id?: string | null;
+}
+
+interface DesignProject {
+  id: string;
+  name: string;
 }
 
 function parseWidgetConfig(url: string): WidgetConfig | null {
@@ -361,6 +367,9 @@ export default function MediaPage() {
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [widgetDialogOpen, setWidgetDialogOpen] = useState(false);
+  const [projects, setProjects] = useState<DesignProject[]>([]);
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [uploadProjectId, setUploadProjectId] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Widget form state — text color defaults to theme-aware
@@ -386,25 +395,32 @@ export default function MediaPage() {
     fontSize: "medium" as "small" | "medium" | "large" | "xlarge",
     qrcodeSize: 140,
     animation: "none" as WidgetAnimation,
+    projectId: "",
   }), [defaultTextColor]);
   const [widgetForm, setWidgetForm] = useState(defaultWidgetForm);
 
   const fetchMedia = async () => {
     setLoading(true);
     const { data, error } = await (supabase as any).from("media_items")
-      .select("id, name, type, url, thumbnail, size, dimensions, duration, created_at")
+      .select("id, name, type, url, thumbnail, size, dimensions, duration, created_at, design_project_id")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     else setMedia(data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchMedia(); }, []);
+  const fetchProjects = async () => {
+    const { data } = await (supabase as any).from("design_projects").select("id, name").order("name");
+    setProjects(data || []);
+  };
+
+  useEffect(() => { fetchMedia(); fetchProjects(); }, []);
 
   const filtered = media.filter((m) => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === "all" || m.type === typeFilter;
-    return matchSearch && matchType;
+    const matchProject = projectFilter === "all" || (projectFilter === "none" ? !m.design_project_id : m.design_project_id === projectFilter);
+    return matchSearch && matchType && matchProject;
   });
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -460,6 +476,7 @@ export default function MediaPage() {
         dimensions,
         duration,
         uploaded_by: user?.id,
+        design_project_id: uploadProjectId || null,
       });
 
       if (error) toast.error(error.message);
@@ -506,6 +523,7 @@ export default function MediaPage() {
       size: "Widget",
       dimensions: "auto",
       uploaded_by: user?.id,
+      design_project_id: (widgetForm as any).projectId || null,
     });
 
     if (error) toast.error(error.message);
@@ -566,7 +584,16 @@ export default function MediaPage() {
           </p>
         </div>
         {isAdmin && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <Select value={uploadProjectId} onValueChange={setUploadProjectId}>
+              <SelectTrigger className="w-[150px] h-9"><FolderOpen className="w-4 h-4 mr-1 text-muted-foreground shrink-0" /><SelectValue placeholder={t("mediaNoProject")} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">{t("mediaNoProject")}</SelectItem>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={() => setWidgetDialogOpen(true)} className="gap-2">
               <Code2 className="w-4 h-4" />
               {t("mediaAddWidget")}
@@ -592,6 +619,16 @@ export default function MediaPage() {
             <SelectItem value="image">{t("image")}</SelectItem>
             <SelectItem value="video">{t("video")}</SelectItem>
             <SelectItem value="widget">{t("widget")}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={projectFilter} onValueChange={setProjectFilter}>
+          <SelectTrigger className="w-[160px]"><FolderOpen className="w-4 h-4 mr-1.5 text-muted-foreground" /><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("mediaAllProjects")}</SelectItem>
+            <SelectItem value="none">{t("mediaNoProject")}</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <div className="flex border border-border rounded-lg overflow-hidden">
@@ -638,6 +675,7 @@ export default function MediaPage() {
                     <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                       <span>{item.size}</span>
                       {item.type !== "widget" && <><span>·</span><span>{item.dimensions}</span></>}
+                      {item.design_project_id && (() => { const p = projects.find(pr => pr.id === item.design_project_id); return p ? <><span>·</span><span className="flex items-center gap-0.5"><FolderOpen className="w-3 h-3" />{p.name}</span></> : null; })()}
                     </div>
                   </div>
                 </Card>
@@ -666,6 +704,7 @@ export default function MediaPage() {
                       {item.type !== "widget" && <span>{item.dimensions}</span>}
                       {item.duration && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{item.duration}</span>}
                       <span>{item.created_at?.split("T")[0]}</span>
+                      {item.design_project_id && (() => { const p = projects.find(pr => pr.id === item.design_project_id); return p ? <span className="flex items-center gap-1"><FolderOpen className="w-3 h-3" />{p.name}</span> : null; })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -747,6 +786,18 @@ export default function MediaPage() {
             <div className="space-y-2">
               <Label>{t("widgetName")} *</Label>
               <Input value={widgetForm.name} onChange={(e) => setWidgetForm({ ...widgetForm, name: e.target.value })} placeholder={t("widgetNamePlaceholder")} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("mediaProjectGroup")}</Label>
+              <Select value={(widgetForm as any).projectId || ""} onValueChange={(v) => setWidgetForm({ ...widgetForm, projectId: v } as any)}>
+                <SelectTrigger><FolderOpen className="w-4 h-4 mr-1.5 text-muted-foreground" /><SelectValue placeholder={t("mediaNoProject")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t("mediaNoProject")}</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>{t("widgetType")}</Label>
