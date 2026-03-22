@@ -286,7 +286,7 @@ export default function ScreensPage() {
               <FolderPlus className="w-4 h-4" />
               {t("screensNewGroup")}
             </Button>
-            <Button onClick={openAdd} className="gap-2" title="新增螢幕">
+            <Button onClick={openAdd} className="gap-2" title={t("tipAddScreen")}>
               <Plus className="w-4 h-4" />
               {t("screensAdd")}
             </Button>
