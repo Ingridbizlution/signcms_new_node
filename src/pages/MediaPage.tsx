@@ -371,6 +371,10 @@ export default function MediaPage() {
     if (widgetForm.widgetType === "webpage") config.url = widgetForm.url;
     if (widgetForm.widgetType === "marquee") { config.text = widgetForm.text; config.speed = widgetForm.speed; }
     if (widgetForm.widgetType === "clock") { config.format = widgetForm.format; config.clockStyle = widgetForm.clockStyle; config.timezone = widgetForm.timezone; config.showDate = widgetForm.showDate; }
+    if (widgetForm.widgetType === "qrcode") config.qrcodeContent = widgetForm.qrcodeContent;
+    if (widgetForm.widgetType === "countdown") { config.targetDate = widgetForm.targetDate; config.countdownTitle = widgetForm.countdownTitle; }
+    if (widgetForm.widgetType === "youtube") config.youtubeUrl = widgetForm.youtubeUrl;
+    if (widgetForm.widgetType === "weather") config.city = widgetForm.city;
 
     const { error } = await (supabase as any).from("media_items").insert({
       name: widgetForm.name,
