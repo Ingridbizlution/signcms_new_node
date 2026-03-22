@@ -128,7 +128,7 @@ export default function SystemLogsPage() {
   const fetchDeviceLogs = async (pMap: Map<string, string>) => {
     setDeviceLoading(true);
     const [logsRes, screensRes] = await Promise.all([
-      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(200),
+      (supabase as any).from("screen_logs").select("id, screen_id, org_id, event_type, event_title, event_detail, created_at, created_by").order("created_at", { ascending: false }).limit(1000),
       (supabase as any).from("screens").select("id, name"),
     ]);
     const sMap = new Map((screensRes.data || []).map((s: any) => [s.id, s.name]));
