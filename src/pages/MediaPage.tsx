@@ -64,6 +64,7 @@ interface MediaItemRow {
   duration?: string | null;
   created_at: string;
   design_project_id?: string | null;
+  is_system?: boolean;
 }
 
 interface ProjectItem {
