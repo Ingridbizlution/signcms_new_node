@@ -444,7 +444,7 @@ export default function ScreensPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`} title="群組">
+                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`} title={t("tipGroup")}>
                     <Layers className="w-3 h-3" />{screen.branch || t("screensUngrouped")}
                   </span>
                   {screen.location && <span className="flex items-center gap-1" title="位置"><MapPin className="w-3 h-3" />{screen.location}</span>}
