@@ -30,7 +30,7 @@ interface PlaylistItem {
   design_project_id: string | null;
   item_type: PlaylistItemType;
   item_name: string;
-  item_sub_type: "image" | "video" | "design";
+  item_sub_type: "image" | "video" | "design" | "widget";
   duration: number;
   sort_order: number;
 }
