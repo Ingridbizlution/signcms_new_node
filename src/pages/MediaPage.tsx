@@ -785,6 +785,18 @@ export default function MediaPage() {
               <Input value={widgetForm.name} onChange={(e) => setWidgetForm({ ...widgetForm, name: e.target.value })} placeholder={t("widgetNamePlaceholder")} />
             </div>
             <div className="space-y-2">
+              <Label>{t("mediaProjectGroup")}</Label>
+              <Select value={(widgetForm as any).projectId || ""} onValueChange={(v) => setWidgetForm({ ...widgetForm, projectId: v } as any)}>
+                <SelectTrigger><FolderOpen className="w-4 h-4 mr-1.5 text-muted-foreground" /><SelectValue placeholder={t("mediaNoProject")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t("mediaNoProject")}</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>{t("widgetType")}</Label>
               <div className="grid grid-cols-4 gap-2">
                 {(["clock", "date", "webpage", "marquee", "qrcode", "countdown", "youtube", "weather"] as WidgetSubType[]).map((wt) => {
