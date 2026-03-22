@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Monitor, WifiOff, PlayCircle, Loader2, Image, FileVideo, CalendarClock, BarChart3 } from "lucide-react";
+import { Monitor, WifiOff, PlayCircle, Loader2, Image, FileVideo, CalendarClock, BarChart3, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 interface StatCardProps {
@@ -39,20 +41,24 @@ export default function DashboardPage() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [mediaItems, setMediaItems] = useState<any[]>([]);
   const [scheduleItems, setScheduleItems] = useState<any[]>([]);
+  const [emergencyCount, setEmergencyCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
-      const [screensRes, schedulesRes, mediaRes, itemsRes] = await Promise.all([
+      const [screensRes, schedulesRes, mediaRes, itemsRes, emergencyRes] = await Promise.all([
         (supabase as any).from("screens").select("id, name, branch, online").order("created_at"),
         (supabase as any).from("schedules").select("id, name, screen_id, enabled, start_time, end_time").order("created_at"),
         (supabase as any).from("media_items").select("id, name, type").order("created_at", { ascending: false }),
         (supabase as any).from("schedule_items").select("id, schedule_id, media_id, duration").order("sort_order"),
+        (supabase as any).from("publish_records").select("id").eq("status", "emergency"),
       ]);
       setScreens(screensRes.data || []);
       setSchedules(schedulesRes.data || []);
       setMediaItems(mediaRes.data || []);
       setScheduleItems(itemsRes.data || []);
+      setEmergencyCount((emergencyRes.data || []).length);
       setLoading(false);
     };
     fetchData();
@@ -107,6 +113,31 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-foreground">{t("dashTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("dashSubtitle")}</p>
       </div>
+
+      {/* Emergency Banner */}
+      {emergencyCount > 0 && (
+        <div className="rounded-xl border-2 border-destructive/40 bg-destructive/5 p-4 flex items-center gap-4 animate-pulse shadow-lg shadow-destructive/10">
+          <div className="w-12 h-12 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+            <ShieldAlert className="w-7 h-7 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-base font-bold text-destructive flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {t("dashEmergencyTitle")}
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {t("dashEmergencyDesc").replace("{count}", String(emergencyCount))}
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            className="shrink-0 gap-2 font-bold"
+            onClick={() => navigate("/publishing")}
+          >
+            {t("dashEmergencyAction")}
+          </Button>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
