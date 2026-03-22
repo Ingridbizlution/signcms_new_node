@@ -901,7 +901,7 @@ export default function ContentStudioPage() {
               return (
                 <div key={overlay.id}
                   className={`absolute cursor-move flex items-center justify-center overflow-hidden rounded-lg ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1 z-40" : "z-30 hover:ring-1 hover:ring-accent-foreground/50"}`}
-                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg }}
+                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg, opacity: (overlay.opacity ?? 100) / 100 }}
                   onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
                   onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
                 >
