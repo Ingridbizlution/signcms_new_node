@@ -354,7 +354,7 @@ export default function MediaPage() {
     };
     if (widgetForm.widgetType === "webpage") config.url = widgetForm.url;
     if (widgetForm.widgetType === "marquee") { config.text = widgetForm.text; config.speed = widgetForm.speed; }
-    if (widgetForm.widgetType === "clock") { config.format = widgetForm.format; config.clockStyle = widgetForm.clockStyle; config.timezone = widgetForm.timezone; }
+    if (widgetForm.widgetType === "clock") { config.format = widgetForm.format; config.clockStyle = widgetForm.clockStyle; config.timezone = widgetForm.timezone; config.showDate = widgetForm.showDate; }
 
     const { error } = await (supabase as any).from("media_items").insert({
       name: widgetForm.name,
