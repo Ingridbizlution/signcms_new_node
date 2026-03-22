@@ -88,9 +88,9 @@ export default function SystemLogsPage() {
   // --- Shared ---
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = async (): Promise<Map<string, string>> => {
     const { data } = await (supabase as any).from("profiles").select("user_id, display_name");
-    return new Map((data || []).map((p: any) => [p.user_id, p.display_name]));
+    return new Map<string, string>((data || []).map((p: any) => [p.user_id, p.display_name]));
   };
 
   const fetchDeviceLogs = async (pMap: Map<string, string>) => {
