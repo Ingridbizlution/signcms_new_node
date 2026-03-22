@@ -197,7 +197,7 @@ export default function SchedulesPage() {
       await (supabase as any).from("schedule_items").delete().eq("schedule_id", editingId);
       const items = form.items.map((item, i) => ({
         schedule_id: editingId, media_id: item.media_id, design_project_id: item.design_project_id,
-        item_type: item.item_type, sort_order: i, duration: item.duration,
+        item_type: item.item_type === "widget" ? "media" : item.item_type, sort_order: i, duration: item.duration,
       }));
       await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedUpdated"));
