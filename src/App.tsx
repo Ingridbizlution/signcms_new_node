@@ -15,6 +15,7 @@ import Schedules from "./pages/Schedules.tsx";
 import Publishing from "./pages/Publishing.tsx";
 import DeviceLogs from "./pages/DeviceLogs.tsx";
 import ContentStudio from "./pages/ContentStudio.tsx";
+import AppStore from "./pages/AppStore.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route path="/studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
                 <Route path="/publishing" element={<ProtectedRoute><Publishing /></ProtectedRoute>} />
                 <Route path="/device-logs" element={<ProtectedRoute><DeviceLogs /></ProtectedRoute>} />
+                <Route path="/app-store" element={<ProtectedRoute><AppStore /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
