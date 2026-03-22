@@ -973,7 +973,6 @@ export default function ContentStudioPage() {
                       <Maximize2 className="w-3 h-3 text-white/60 rotate-90" />
                     </div>
                   )}
-                  </div>
                 </div>
               );
             })}
