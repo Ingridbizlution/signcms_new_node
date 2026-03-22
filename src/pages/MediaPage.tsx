@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-type WidgetSubType = "date" | "clock" | "webpage" | "marquee";
+type WidgetSubType = "date" | "clock" | "webpage" | "marquee" | "qrcode" | "countdown" | "youtube" | "weather";
 
 interface WidgetConfig {
   widgetType: WidgetSubType;
@@ -36,6 +36,11 @@ interface WidgetConfig {
   timezone?: string;
   bgColor?: string;
   textColor?: string;
+  qrcodeContent?: string;
+  targetDate?: string;
+  countdownTitle?: string;
+  youtubeUrl?: string;
+  city?: string;
 }
 
 interface MediaItem {
