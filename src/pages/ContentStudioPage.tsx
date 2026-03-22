@@ -158,6 +158,9 @@ function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; t
   if (items.length === 0) return null;
 
   const renderItem = (item: MediaItem) => {
+    if (item.type === "widget" && item.widgetConfig) {
+      return <WidgetZonePreview config={item.widgetConfig} />;
+    }
     if (item.type === "image" && (item.url.startsWith("data:") || item.url.startsWith("http"))) {
       return <img src={item.url} alt={item.name} className="w-full h-full object-cover" />;
     }
