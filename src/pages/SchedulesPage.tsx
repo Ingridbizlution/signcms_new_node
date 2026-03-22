@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarClock, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown,
-  Play, Clock, Monitor, FileImage, FileVideo, X,
+  Play, Clock, Monitor, FileImage, FileVideo, X, Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,109 +21,217 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-interface PlaylistItem { id: number; mediaName: string; mediaType: "image" | "video"; duration: number; }
-interface Schedule {
-  id: number; name: string; screen: string; startTime: string; endTime: string;
-  days: string[]; enabled: boolean; items: PlaylistItem[];
+interface PlaylistItem {
+  id: string;
+  media_id: string;
+  media_name: string;
+  media_type: "image" | "video";
+  duration: number;
+  sort_order: number;
 }
 
-const screens = [
-  "台北信義店 - 1F 入口大螢幕", "台北信義店 - B1 美食街看板",
-  "台中逢甲店 - 門口大螢幕", "高雄巨蛋店 - 結帳區看板",
-  "新竹竹北店 - 大廳迎賓螢幕", "台南永康店 - 門口直立看板",
-];
+interface Schedule {
+  id: string;
+  name: string;
+  screen_id: string;
+  screen_label: string;
+  start_time: string;
+  end_time: string;
+  days: string[];
+  enabled: boolean;
+  items: PlaylistItem[];
+}
 
-const availableMedia = [
-  { name: "春季促銷橫幅.jpg", type: "image" as const },
-  { name: "新品上市動畫.mp4", type: "video" as const },
-  { name: "品牌Logo動態.mp4", type: "video" as const },
-  { name: "夏季活動海報.png", type: "image" as const },
-  { name: "會員日廣告.jpg", type: "image" as const },
-  { name: "美食推薦輪播.mp4", type: "video" as const },
-];
+interface ScreenOption {
+  id: string;
+  label: string;
+}
 
-const initialSchedules: Schedule[] = [
-  { id: 1, name: "早班輪播", screen: "台北信義店 - 1F 入口大螢幕", startTime: "09:00", endTime: "12:00", days: ["一", "二", "三", "四", "五"], enabled: true, items: [
-    { id: 1, mediaName: "春季促銷橫幅.jpg", mediaType: "image", duration: 10 },
-    { id: 2, mediaName: "新品上市動畫.mp4", mediaType: "video", duration: 30 },
-    { id: 3, mediaName: "會員日廣告.jpg", mediaType: "image", duration: 8 },
-  ]},
-  { id: 2, name: "午間特惠", screen: "台中逢甲店 - 門口大螢幕", startTime: "11:30", endTime: "14:00", days: ["一", "二", "三", "四", "五", "六", "日"], enabled: true, items: [
-    { id: 4, mediaName: "美食推薦輪播.mp4", mediaType: "video", duration: 45 },
-    { id: 5, mediaName: "夏季活動海報.png", mediaType: "image", duration: 15 },
-  ]},
-  { id: 3, name: "週末全天", screen: "高雄巨蛋店 - 結帳區看板", startTime: "10:00", endTime: "22:00", days: ["六", "日"], enabled: false, items: [
-    { id: 6, mediaName: "品牌Logo動態.mp4", mediaType: "video", duration: 10 },
-    { id: 7, mediaName: "春季促銷橫幅.jpg", mediaType: "image", duration: 12 },
-  ]},
-];
+interface MediaOption {
+  id: string;
+  name: string;
+  type: "image" | "video";
+}
 
-const emptyForm = { name: "", screen: "", startTime: "09:00", endTime: "18:00", days: ["一", "二", "三", "四", "五"] as string[], items: [] as PlaylistItem[] };
+interface FormPlaylistItem {
+  tempId: number;
+  media_id: string;
+  media_name: string;
+  media_type: "image" | "video";
+  duration: number;
+}
 
 export default function SchedulesPage() {
   const { isAdmin } = useUserRole();
   const { t, language } = useLanguage();
-  const [schedules, setSchedules] = useState<Schedule[]>(initialSchedules);
+  const { user } = useAuth();
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [screenOptions, setScreenOptions] = useState<ScreenOption[]>([]);
+  const [mediaOptions, setMediaOptions] = useState<MediaOption[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const [form, setForm] = useState({
+    name: "", screen_id: "", startTime: "09:00", endTime: "18:00",
+    days: ["一", "二", "三", "四", "五"] as string[],
+    items: [] as FormPlaylistItem[],
+  });
 
   const dayKeys = ["dayMon", "dayTue", "dayWed", "dayThu", "dayFri", "daySat", "daySun"] as const;
   const allDaysRaw = ["一", "二", "三", "四", "五", "六", "日"];
   const dayLabels = dayKeys.map((k) => t(k));
 
-  const openAdd = () => { setEditingId(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (s: Schedule) => {
-    setEditingId(s.id);
-    setForm({ name: s.name, screen: s.screen, startTime: s.startTime, endTime: s.endTime, days: [...s.days], items: s.items.map((i) => ({ ...i })) });
+  const fetchAll = async () => {
+    setLoading(true);
+
+    // Fetch screens for dropdown
+    const { data: screensData } = await (supabase as any).from("screens").select("id, name, branch").order("branch");
+    const opts: ScreenOption[] = (screensData || []).map((s: any) => ({ id: s.id, label: `${s.branch} - ${s.name}` }));
+    setScreenOptions(opts);
+
+    // Fetch media for dropdown
+    const { data: mediaData } = await (supabase as any).from("media_items").select("id, name, type").order("created_at", { ascending: false });
+    setMediaOptions(mediaData || []);
+
+    // Fetch schedules
+    const { data: schedData } = await (supabase as any).from("schedules").select("*").order("created_at");
+
+    // Fetch schedule items
+    const { data: itemsData } = await (supabase as any).from("schedule_items")
+      .select("id, schedule_id, media_id, sort_order, duration")
+      .order("sort_order");
+
+    // Fetch media names for items
+    const mediaMap = new Map((mediaData || []).map((m: any) => [m.id, m]));
+    const screenMap = new Map(opts.map((s) => [s.id, s.label]));
+
+    const merged: Schedule[] = (schedData || []).map((s: any) => {
+      const schedItems = (itemsData || [])
+        .filter((i: any) => i.schedule_id === s.id)
+        .map((i: any) => {
+          const m = mediaMap.get(i.media_id) as any;
+          return {
+            id: i.id,
+            media_id: i.media_id,
+            media_name: m?.name || "Unknown",
+            media_type: m?.type || "image",
+            duration: i.duration,
+            sort_order: i.sort_order,
+          };
+        });
+      return {
+        id: s.id,
+        name: s.name,
+        screen_id: s.screen_id,
+        screen_label: screenMap.get(s.screen_id) || "",
+        start_time: s.start_time,
+        end_time: s.end_time,
+        days: s.days || [],
+        enabled: s.enabled,
+        items: schedItems,
+      };
+    });
+
+    setSchedules(merged);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm({ name: "", screen_id: "", startTime: "09:00", endTime: "18:00", days: ["一", "二", "三", "四", "五"], items: [] });
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!form.name || !form.screen) { toast.error(t("schedFillRequired")); return; }
+  const openEdit = (s: Schedule) => {
+    setEditingId(s.id);
+    setForm({
+      name: s.name, screen_id: s.screen_id, startTime: s.start_time, endTime: s.end_time,
+      days: [...s.days],
+      items: s.items.map((i) => ({ tempId: Math.random(), media_id: i.media_id, media_name: i.media_name, media_type: i.media_type, duration: i.duration })),
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name || !form.screen_id) { toast.error(t("schedFillRequired")); return; }
     if (form.items.length === 0) { toast.error(t("schedAddItem")); return; }
-    if (editingId !== null) {
-      setSchedules((prev) => prev.map((s) => s.id === editingId ? { ...s, ...form, enabled: s.enabled } : s));
+    setSaving(true);
+
+    if (editingId) {
+      await (supabase as any).from("schedules").update({
+        name: form.name, screen_id: form.screen_id, start_time: form.startTime,
+        end_time: form.endTime, days: form.days, updated_at: new Date().toISOString(),
+      }).eq("id", editingId);
+
+      // Replace items
+      await (supabase as any).from("schedule_items").delete().eq("schedule_id", editingId);
+      const items = form.items.map((item, i) => ({
+        schedule_id: editingId, media_id: item.media_id, sort_order: i, duration: item.duration,
+      }));
+      await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedUpdated"));
     } else {
-      setSchedules((prev) => [...prev, { id: Date.now(), ...form, enabled: true }]);
+      const { data: newSched, error } = await (supabase as any).from("schedules").insert({
+        name: form.name, screen_id: form.screen_id, start_time: form.startTime,
+        end_time: form.endTime, days: form.days, created_by: user?.id,
+      }).select("id").single();
+
+      if (error) { toast.error(error.message); setSaving(false); return; }
+
+      const items = form.items.map((item, i) => ({
+        schedule_id: newSched.id, media_id: item.media_id, sort_order: i, duration: item.duration,
+      }));
+      await (supabase as any).from("schedule_items").insert(items);
       toast.success(t("schedAdded"));
     }
+
+    setSaving(false);
     setDialogOpen(false);
+    fetchAll();
   };
 
-  const handleDelete = () => {
-    if (deleteId !== null) { setSchedules((prev) => prev.filter((s) => s.id !== deleteId)); toast.success(t("schedDeleted")); setDeleteId(null); }
+  const handleDelete = async () => {
+    if (deleteId) {
+      const { error } = await (supabase as any).from("schedules").delete().eq("id", deleteId);
+      if (error) toast.error(error.message);
+      else { toast.success(t("schedDeleted")); fetchAll(); }
+      setDeleteId(null);
+    }
   };
 
-  const toggleEnabled = (id: number) => { setSchedules((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))); };
-
-  const addMediaToForm = (media: { name: string; type: "image" | "video" }) => {
-    setForm((prev) => ({ ...prev, items: [...prev.items, { id: Date.now() + Math.random(), mediaName: media.name, mediaType: media.type, duration: media.type === "video" ? 30 : 10 }] }));
+  const toggleEnabled = async (id: string, current: boolean) => {
+    await (supabase as any).from("schedules").update({ enabled: !current }).eq("id", id);
+    fetchAll();
   };
-  const removeItemFromForm = (itemId: number) => { setForm((prev) => ({ ...prev, items: prev.items.filter((i) => i.id !== itemId) })); };
-  const updateItemDuration = (itemId: number, duration: number) => { setForm((prev) => ({ ...prev, items: prev.items.map((i) => i.id === itemId ? { ...i, duration: Math.max(1, duration) } : i) })); };
+
+  const addMediaToForm = (media: MediaOption) => {
+    setForm((prev) => ({ ...prev, items: [...prev.items, { tempId: Date.now() + Math.random(), media_id: media.id, media_name: media.name, media_type: media.type, duration: media.type === "video" ? 30 : 10 }] }));
+  };
+  const removeItemFromForm = (tempId: number) => { setForm((prev) => ({ ...prev, items: prev.items.filter((i) => i.tempId !== tempId) })); };
+  const updateItemDuration = (tempId: number, duration: number) => { setForm((prev) => ({ ...prev, items: prev.items.map((i) => i.tempId === tempId ? { ...i, duration: Math.max(1, duration) } : i) })); };
   const moveItem = (index: number, direction: "up" | "down") => {
-    const newItems = [...form.items];
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    const newItems = [...form.items]; const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newItems.length) return;
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
     setForm((prev) => ({ ...prev, items: newItems }));
   };
   const handleDragStart = (index: number) => { setDragIndex(index); };
   const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (dragIndex === null || dragIndex === index) return;
+    e.preventDefault(); if (dragIndex === null || dragIndex === index) return;
     const newItems = [...form.items]; const [dragged] = newItems.splice(dragIndex, 1); newItems.splice(index, 0, dragged);
     setForm((prev) => ({ ...prev, items: newItems })); setDragIndex(index);
   };
   const handleDragEnd = () => { setDragIndex(null); };
   const toggleDay = (day: string) => { setForm((prev) => ({ ...prev, days: prev.days.includes(day) ? prev.days.filter((d) => d !== day) : [...prev.days, day] })); };
 
-  const totalDuration = (items: PlaylistItem[]) => items.reduce((sum, i) => sum + i.duration, 0);
+  const totalDuration = (items: { duration: number }[]) => items.reduce((sum, i) => sum + i.duration, 0);
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60); const s = secs % 60;
     return m > 0 ? `${m}${t("durationMin")}${s > 0 ? `${s}${t("durationSec")}` : ""}` : `${s}${t("durationSec")}`;
@@ -139,73 +249,79 @@ export default function SchedulesPage() {
         )}
       </div>
 
-      {schedules.length === 0 && (
-        <Card className="p-12 text-center text-muted-foreground">
-          <CalendarClock className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p>{t("schedNoResult")}</p>
-        </Card>
-      )}
-
-      <div className="grid gap-4">
-        {schedules.map((schedule, i) => (
-          <div key={schedule.id} className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${!schedule.enabled ? "[&>*]:opacity-60" : ""}`}>
-            <Card className="hover-lift shadow-sm">
-              <div className="p-4 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                  <CalendarClock className="w-5 h-5 text-muted-foreground/60" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm font-semibold text-foreground">{schedule.name}</h3>
-                    <Badge variant={schedule.enabled ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
-                      {schedule.enabled ? t("enabled") : t("disabled")}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1"><Monitor className="w-3 h-3" />{schedule.screen}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{schedule.startTime} - {schedule.endTime}</span>
-                    <span className="flex items-center gap-1"><Play className="w-3 h-3" />{schedule.items.length} {t("schedItems")} · {formatDuration(totalDuration(schedule.items))}</span>
-                  </div>
-                  <div className="flex gap-1 mt-2">
-                    {allDaysRaw.map((day, di) => (
-                      <span key={day} className={`w-6 h-6 rounded text-[10px] font-medium flex items-center justify-center ${
-                        schedule.days.includes(day) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/40"
-                      }`}>{dayLabels[di]}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {isAdmin && <Switch checked={schedule.enabled} onCheckedChange={() => toggleEnabled(schedule.id)} />}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)}>
-                    {expandedId === schedule.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </Button>
-                  {isAdmin && (
-                    <>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </>
-                  )}
-                </div>
-              </div>
-              {expandedId === schedule.id && (
-                <div className="border-t border-border px-4 py-3 bg-muted/30">
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">{t("schedPlayOrder")}</p>
-                  <div className="space-y-1.5">
-                    {schedule.items.map((item, index) => (
-                      <div key={item.id} className="flex items-center gap-3 bg-card rounded-lg px-3 py-2 text-sm">
-                        <span className="text-muted-foreground text-xs w-5 text-center">{index + 1}</span>
-                        {item.mediaType === "image" ? <FileImage className="w-4 h-4 text-muted-foreground shrink-0" /> : <FileVideo className="w-4 h-4 text-muted-foreground shrink-0" />}
-                        <span className="flex-1 truncate text-foreground">{item.mediaName}</span>
-                        <span className="text-xs text-muted-foreground">{item.duration}{t("seconds")}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : (
+        <>
+          {schedules.length === 0 && (
+            <Card className="p-12 text-center text-muted-foreground">
+              <CalendarClock className="w-10 h-10 mx-auto mb-3 opacity-40" />
+              <p>{t("schedNoResult")}</p>
             </Card>
+          )}
+
+          <div className="grid gap-4">
+            {schedules.map((schedule, i) => (
+              <div key={schedule.id} className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${!schedule.enabled ? "[&>*]:opacity-60" : ""}`}>
+                <Card className="hover-lift shadow-sm">
+                  <div className="p-4 flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                      <CalendarClock className="w-5 h-5 text-muted-foreground/60" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-semibold text-foreground">{schedule.name}</h3>
+                        <Badge variant={schedule.enabled ? "default" : "secondary"} className="text-[10px] px-1.5 py-0">
+                          {schedule.enabled ? t("enabled") : t("disabled")}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                        <span className="flex items-center gap-1"><Monitor className="w-3 h-3" />{schedule.screen_label}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{schedule.start_time} - {schedule.end_time}</span>
+                        <span className="flex items-center gap-1"><Play className="w-3 h-3" />{schedule.items.length} {t("schedItems")} · {formatDuration(totalDuration(schedule.items))}</span>
+                      </div>
+                      <div className="flex gap-1 mt-2">
+                        {allDaysRaw.map((day, di) => (
+                          <span key={day} className={`w-6 h-6 rounded text-[10px] font-medium flex items-center justify-center ${
+                            schedule.days.includes(day) ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground/40"
+                          }`}>{dayLabels[di]}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isAdmin && <Switch checked={schedule.enabled} onCheckedChange={() => toggleEnabled(schedule.id, schedule.enabled)} />}
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)}>
+                        {expandedId === schedule.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)}><Trash2 className="w-4 h-4" /></Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {expandedId === schedule.id && (
+                    <div className="border-t border-border px-4 py-3 bg-muted/30">
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">{t("schedPlayOrder")}</p>
+                      <div className="space-y-1.5">
+                        {schedule.items.map((item, index) => (
+                          <div key={item.id} className="flex items-center gap-3 bg-card rounded-lg px-3 py-2 text-sm">
+                            <span className="text-muted-foreground text-xs w-5 text-center">{index + 1}</span>
+                            {item.media_type === "image" ? <FileImage className="w-4 h-4 text-muted-foreground shrink-0" /> : <FileVideo className="w-4 h-4 text-muted-foreground shrink-0" />}
+                            <span className="flex-1 truncate text-foreground">{item.media_name}</span>
+                            <span className="text-xs text-muted-foreground">{item.duration}{t("seconds")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -217,9 +333,9 @@ export default function SchedulesPage() {
             </div>
             <div className="space-y-2">
               <Label>{t("schedScreen")} *</Label>
-              <Select value={form.screen} onValueChange={(v) => setForm({ ...form, screen: v })}>
+              <Select value={form.screen_id} onValueChange={(v) => setForm({ ...form, screen_id: v })}>
                 <SelectTrigger><SelectValue placeholder={t("schedSelectScreen")} /></SelectTrigger>
-                <SelectContent>{screens.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent>{screenOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -244,40 +360,47 @@ export default function SchedulesPage() {
               <div className="space-y-1.5 min-h-[40px]">
                 {form.items.length === 0 && <div className="text-center text-sm text-muted-foreground py-4 bg-muted/50 rounded-lg">{t("schedFromBelow")}</div>}
                 {form.items.map((item, index) => (
-                  <div key={item.id} draggable onDragStart={() => handleDragStart(index)} onDragOver={(e) => handleDragOver(e, index)} onDragEnd={handleDragEnd}
+                  <div key={item.tempId} draggable onDragStart={() => handleDragStart(index)} onDragOver={(e) => handleDragOver(e, index)} onDragEnd={handleDragEnd}
                     className={`flex items-center gap-2 bg-card border border-border rounded-lg px-2 py-1.5 text-sm group transition-colors ${dragIndex === index ? "opacity-50 border-primary" : ""}`}>
                     <GripVertical className="w-4 h-4 text-muted-foreground/40 cursor-grab shrink-0" />
                     <span className="text-muted-foreground text-xs w-4 text-center shrink-0">{index + 1}</span>
-                    {item.mediaType === "image" ? <FileImage className="w-4 h-4 text-muted-foreground shrink-0" /> : <FileVideo className="w-4 h-4 text-muted-foreground shrink-0" />}
-                    <span className="flex-1 truncate text-foreground text-xs">{item.mediaName}</span>
+                    {item.media_type === "image" ? <FileImage className="w-4 h-4 text-muted-foreground shrink-0" /> : <FileVideo className="w-4 h-4 text-muted-foreground shrink-0" />}
+                    <span className="flex-1 truncate text-foreground text-xs">{item.media_name}</span>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Input type="number" min={1} value={item.duration} onChange={(e) => updateItemDuration(item.id, parseInt(e.target.value) || 1)} className="w-14 h-7 text-xs text-center" />
+                      <Input type="number" min={1} value={item.duration} onChange={(e) => updateItemDuration(item.tempId, parseInt(e.target.value) || 1)} className="w-14 h-7 text-xs text-center" />
                       <span className="text-[10px] text-muted-foreground">{t("seconds")}</span>
                     </div>
                     <div className="flex shrink-0">
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "up")} disabled={index === 0}><ChevronUp className="w-3 h-3" /></Button>
                       <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveItem(index, "down")} disabled={index === form.items.length - 1}><ChevronDown className="w-3 h-3" /></Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive shrink-0" onClick={() => removeItemFromForm(item.id)}><X className="w-3 h-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive shrink-0" onClick={() => removeItemFromForm(item.tempId)}><X className="w-3 h-3" /></Button>
                   </div>
                 ))}
               </div>
               <div className="border-t border-border pt-3 mt-3">
                 <p className="text-xs text-muted-foreground mb-2">{t("schedClickToAdd")}</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {availableMedia.map((media) => (
-                    <button key={media.name} type="button" onClick={() => addMediaToForm(media)} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/50 hover:bg-muted text-sm text-left transition-colors">
-                      {media.type === "image" ? <FileImage className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <FileVideo className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                      <span className="truncate text-xs text-foreground">{media.name}</span>
-                    </button>
-                  ))}
-                </div>
+                {mediaOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {mediaOptions.map((media) => (
+                      <button key={media.id} type="button" onClick={() => addMediaToForm(media)} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/50 hover:bg-muted text-sm text-left transition-colors">
+                        {media.type === "image" ? <FileImage className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <FileVideo className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                        <span className="truncate text-xs text-foreground">{media.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">{t("cancel")}</Button></DialogClose>
-            <Button onClick={handleSave}>{editingId ? t("schedSaveChanges") : t("schedAdd")}</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingId ? t("schedSaveChanges") : t("schedAdd")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
