@@ -219,8 +219,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   zone: Zone;
   onUpdate: (content: ZoneContent) => void;
   onClose: () => void;
-  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[];
-  dbWidgets: { id: string; name: string; url: string }[];
+  dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null; created_at?: string }[];
+  dbWidgets: { id: string; name: string; url: string; created_at?: string }[];
   isEmbedded?: boolean;
 }) {
   const { t } = useLanguage();
