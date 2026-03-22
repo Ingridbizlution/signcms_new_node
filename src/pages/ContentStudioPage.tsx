@@ -347,9 +347,30 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
 
           {/* Currently added content items */}
           {mediaItems.length > 0 && (
-            <div className="space-y-1 mb-2">
+            <div className="space-y-0.5 mb-2">
               {mediaItems.map((m, i) => (
-                <div key={m.id + i} className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs">
+                <div
+                  key={`${m.id}-${i}`}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+                  onDragEnd={() => {
+                    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+                      const reordered = [...mediaItems];
+                      const [moved] = reordered.splice(dragIdx, 1);
+                      reordered.splice(dragOverIdx, 0, moved);
+                      onUpdate({ ...content, type: "media", mediaItems: reordered });
+                    }
+                    setDragIdx(null);
+                    setDragOverIdx(null);
+                  }}
+                  className={`flex items-center gap-1.5 p-1.5 rounded-md text-xs transition-all ${
+                    dragOverIdx === i && dragIdx !== null && dragIdx !== i
+                      ? "bg-primary/15 ring-1 ring-primary/40"
+                      : "bg-muted/50"
+                  } ${dragIdx === i ? "opacity-40" : ""}`}
+                >
+                  <GripVertical className="w-3 h-3 text-muted-foreground/50 shrink-0 cursor-grab active:cursor-grabbing" />
                   {m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : m.type === "video" ? <Film className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />}
                   <span className="truncate flex-1 text-foreground">{m.name}</span>
                   <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{m.type === "image" ? "IMG" : m.type === "video" ? "VID" : "Widget"}</Badge>
