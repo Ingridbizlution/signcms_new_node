@@ -58,6 +58,7 @@ export default function DashboardPage() {
       setSchedules(schedulesRes.data || []);
       setMediaItems(mediaRes.data || []);
       setScheduleItems(itemsRes.data || []);
+      setEmergencyCount((emergencyRes.data || []).length);
       setLoading(false);
     };
     fetchData();
