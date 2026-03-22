@@ -8,6 +8,7 @@ import Image from "@tiptap/extension-image";
 import FontFamily from "@tiptap/extension-font-family";
 import FontSize from "@tiptap/extension-font-size";
 import { useRef } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
