@@ -50,6 +50,7 @@ const App = () => (
                   <Route path="/device-logs" element={<ProtectedRoute><DeviceLogs /></ProtectedRoute>} />
                   <Route path="/app-store" element={<ProtectedRoute><AppStore /></ProtectedRoute>} />
                   <Route path="/announcement" element={<ProtectedRoute><Announcement /></ProtectedRoute>} />
+                  <Route path="/queue" element={<ProtectedRoute><Queue /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
