@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal } from "lucide-react";
+import { Monitor, Plus, Pencil, Trash2, Search, MapPin, Loader2, FolderPlus, Layers, MoreHorizontal, Settings, RotateCw, Power, RefreshCw } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
@@ -62,7 +64,22 @@ export default function ScreensPage() {
   const [renameTarget, setRenameTarget] = useState("");
   const [renameValue, setRenameValue] = useState("");
 
-  // Group delete
+  // Screen settings
+  const [settingsScreen, setSettingsScreen] = useState<Screen | null>(null);
+  const [settingsForm, setSettingsForm] = useState({
+    ipMode: "dhcp",
+    ipAddress: "",
+    subnet: "255.255.255.0",
+    gateway: "",
+    dns: "8.8.8.8",
+    ntpServer: "pool.ntp.org",
+    rotation: "0",
+    scheduleEnabled: false,
+    scheduleOn: "08:00",
+    scheduleOff: "22:00",
+  });
+  const [rebootConfirmOpen, setRebootConfirmOpen] = useState(false);
+
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
 
   const fetchScreens = async () => {
@@ -306,6 +323,7 @@ export default function ScreensPage() {
               </div>
               {isAdmin && (
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSettingsScreen(screen)}><Settings className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)}><Pencil className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)}><Trash2 className="w-4 h-4" /></Button>
                 </div>
@@ -474,6 +492,159 @@ export default function ScreensPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("confirmDelete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Screen Settings Dialog */}
+      <Dialog open={settingsScreen !== null} onOpenChange={(open) => { if (!open) setSettingsScreen(null); }}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              {t("screenSettings")} — {settingsScreen?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            {/* Network Settings */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Monitor className="w-4 h-4 text-primary" />
+                {t("screenSettingsNetwork")}
+              </h3>
+              <div className="space-y-3 pl-6">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{t("screenSettingsIpMode")}</Label>
+                  <Select value={settingsForm.ipMode} onValueChange={(v) => setSettingsForm({ ...settingsForm, ipMode: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dhcp">{t("screenSettingsDhcp")}</SelectItem>
+                      <SelectItem value="static">{t("screenSettingsStatic")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {settingsForm.ipMode === "static" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsIpAddress")}</Label>
+                      <Input value={settingsForm.ipAddress} onChange={(e) => setSettingsForm({ ...settingsForm, ipAddress: e.target.value })} placeholder="192.168.1.100" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsSubnet")}</Label>
+                      <Input value={settingsForm.subnet} onChange={(e) => setSettingsForm({ ...settingsForm, subnet: e.target.value })} placeholder="255.255.255.0" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsGateway")}</Label>
+                      <Input value={settingsForm.gateway} onChange={(e) => setSettingsForm({ ...settingsForm, gateway: e.target.value })} placeholder="192.168.1.1" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsDns")}</Label>
+                      <Input value={settingsForm.dns} onChange={(e) => setSettingsForm({ ...settingsForm, dns: e.target.value })} placeholder="8.8.8.8" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* NTP Server */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-primary" />
+                {t("screenSettingsNtp")}
+              </h3>
+              <div className="pl-6">
+                <Input value={settingsForm.ntpServer} onChange={(e) => setSettingsForm({ ...settingsForm, ntpServer: e.target.value })} placeholder="pool.ntp.org" />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Screen Rotation */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <RotateCw className="w-4 h-4 text-primary" />
+                {t("screenSettingsRotation")}
+              </h3>
+              <div className="pl-6">
+                <Select value={settingsForm.rotation} onValueChange={(v) => setSettingsForm({ ...settingsForm, rotation: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">{t("screenSettingsRotation0")}</SelectItem>
+                    <SelectItem value="90">{t("screenSettingsRotation90")}</SelectItem>
+                    <SelectItem value="180">{t("screenSettingsRotation180")}</SelectItem>
+                    <SelectItem value="270">{t("screenSettingsRotation270")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Schedule On/Off */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Power className="w-4 h-4 text-primary" />
+                {t("screenSettingsScheduleOnOff")}
+              </h3>
+              <div className="space-y-3 pl-6">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">{t("enabled")}</Label>
+                  <Switch checked={settingsForm.scheduleEnabled} onCheckedChange={(v) => setSettingsForm({ ...settingsForm, scheduleEnabled: v })} />
+                </div>
+                {settingsForm.scheduleEnabled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsScheduleOn")}</Label>
+                      <Input type="time" value={settingsForm.scheduleOn} onChange={(e) => setSettingsForm({ ...settingsForm, scheduleOn: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">{t("screenSettingsScheduleOff")}</Label>
+                      <Input type="time" value={settingsForm.scheduleOff} onChange={(e) => setSettingsForm({ ...settingsForm, scheduleOff: e.target.value })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Reboot */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-destructive" />
+                {t("screenSettingsReboot")}
+              </h3>
+              <div className="pl-6">
+                <Button variant="destructive" size="sm" className="gap-2" onClick={() => setRebootConfirmOpen(true)}>
+                  <RefreshCw className="w-4 h-4" />
+                  {t("screenSettingsReboot")}
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">{t("cancel")}</Button></DialogClose>
+            <Button onClick={() => { toast.success(t("screenSettingsSaved")); setSettingsScreen(null); }}>
+              {t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reboot Confirm */}
+      <AlertDialog open={rebootConfirmOpen} onOpenChange={setRebootConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("screenSettingsRebootConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("screenSettingsRebootDesc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { toast.success(t("screenSettingsRebooting")); setRebootConfirmOpen(false); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("screenSettingsReboot")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
