@@ -174,11 +174,11 @@ export default function TeamManagement() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)} title={expandedTeam === team.id ? t("cancel") : t("orgMemberCount")}>
                     {expandedTeam === team.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(team)}><Pencil className="w-3.5 h-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(team)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(team)} title={t("edit")}><Pencil className="w-3.5 h-3.5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog(team)} title={t("confirmDelete")}><Trash2 className="w-3.5 h-3.5" /></Button>
                 </div>
               </div>
 
