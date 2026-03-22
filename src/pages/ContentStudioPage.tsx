@@ -60,11 +60,12 @@ interface Zone {
 
 interface OverlayBlock {
   id: string;
-  x: number; // px position relative to canvas
+  x: number;
   y: number;
-  w: number; // px size
+  w: number;
   h: number;
   label: string;
+  opacity: number; // 0-100
   content?: ZoneContent;
 }
 
@@ -211,12 +212,13 @@ function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; t
 }
 
 // ── Zone Editor ────────────────────────────────────────────────────
-function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets }: {
+function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }: {
   zone: Zone;
   onUpdate: (content: ZoneContent) => void;
   onClose: () => void;
   dbMedia: { id: string; name: string; type: string; url: string; thumbnail: string; duration: string | null }[];
   dbWidgets: { id: string; name: string; url: string }[];
+  isEmbedded?: boolean;
 }) {
   const { t } = useLanguage();
   const content: ZoneContent = zone.content || { type: "color", value: "", bgColor: "hsl(var(--muted))" };
@@ -235,12 +237,7 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets }: {
     onUpdate({ ...content, mediaItems: updated, type: updated.length > 0 ? "media" : "color" });
   };
 
-  return (
-    <Card className="absolute z-50 p-4 w-80 shadow-xl border border-border animate-scale-in max-h-[90%] overflow-y-auto" style={{ top: 8, right: 8 }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-foreground">{t("studioEditZone")} {zone.label}</span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}><X className="w-3.5 h-3.5" /></Button>
-      </div>
+  const innerContent = (
       <div className="space-y-3">
         {/* Media carousel section */}
         <div>
@@ -386,6 +383,17 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets }: {
           </div>
         </div>
       </div>
+  );
+
+  if (isEmbedded) return innerContent;
+
+  return (
+    <Card className="absolute z-50 p-4 w-80 shadow-xl border border-border animate-scale-in max-h-[90%] overflow-y-auto" style={{ top: 8, right: 8 }}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-foreground">{t("studioEditZone")} {zone.label}</span>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}><X className="w-3.5 h-3.5" /></Button>
+      </div>
+      {innerContent}
     </Card>
   );
 }
@@ -597,7 +605,7 @@ export default function ContentStudioPage() {
   const addOverlay = useCallback(() => {
     const id = `overlay-${Date.now()}`;
     const label = String.fromCharCode(65 + overlays.length); // A, B, C...
-    setOverlays((prev) => [...prev, { id, x: 50, y: 50, w: 200, h: 120, label: `OV-${label}`, content: { type: "text", value: "", bgColor: "hsla(0, 0%, 0%, 0.7)", fontSize: 20, textColor: "hsl(0 0% 100%)" } }]);
+    setOverlays((prev) => [...prev, { id, x: 50, y: 50, w: 200, h: 120, label: `OV-${label}`, opacity: 100, content: { type: "text", value: "", bgColor: "hsla(0, 0%, 0%, 0.7)", fontSize: 20, textColor: "hsl(0 0% 100%)" } }]);
   }, [overlays.length]);
 
   const deleteOverlay = useCallback((id: string) => {
@@ -900,7 +908,7 @@ export default function ContentStudioPage() {
               return (
                 <div key={overlay.id}
                   className={`absolute cursor-move flex items-center justify-center overflow-hidden rounded-lg ${isSelected ? "ring-2 ring-accent-foreground ring-offset-1 z-40" : "z-30 hover:ring-1 hover:ring-accent-foreground/50"}`}
-                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg }}
+                  style={{ left: overlay.x, top: overlay.y, width: overlay.w, height: overlay.h, background: bg, opacity: (overlay.opacity ?? 100) / 100 }}
                   onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
                   onMouseDown={(e) => { if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
                 >
@@ -947,7 +955,22 @@ export default function ContentStudioPage() {
               <ZoneEditor zone={activeZone} onUpdate={(content) => updateZoneContent(activeZone.id, content)} onClose={() => setSelectedZone(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
             )}
             {activeOverlay && (
-              <ZoneEditor zone={{ id: activeOverlay.id, x: 0, y: 0, w: 100, h: 100, label: activeOverlay.label, content: activeOverlay.content }} onUpdate={(content) => updateOverlayContent(activeOverlay.id, content)} onClose={() => setSelectedOverlay(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} />
+              <Card className="absolute z-50 p-4 w-80 shadow-xl border border-border animate-scale-in max-h-[90%] overflow-y-auto" style={{ top: 8, right: 8 }}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-foreground">{t("studioEditOverlay")} {activeOverlay.label}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedOverlay(null)}><X className="w-3.5 h-3.5" /></Button>
+                </div>
+                {/* Opacity slider */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs text-muted-foreground">{t("studioOpacity")}</label>
+                    <span className="text-xs font-medium text-foreground">{activeOverlay.opacity ?? 100}%</span>
+                  </div>
+                  <Slider value={[activeOverlay.opacity ?? 100]} min={10} max={100} step={5} onValueChange={([v]) => setOverlays((prev) => prev.map((o) => o.id === activeOverlay.id ? { ...o, opacity: v } : o))} />
+                </div>
+                {/* Reuse ZoneEditor content inline - delegate to ZoneEditor */}
+                <ZoneEditor zone={{ id: activeOverlay.id, x: 0, y: 0, w: 100, h: 100, label: activeOverlay.label, content: activeOverlay.content }} onUpdate={(content) => updateOverlayContent(activeOverlay.id, content)} onClose={() => setSelectedOverlay(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} isEmbedded />
+              </Card>
             )}
           </div>
         </div>
