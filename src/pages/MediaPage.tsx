@@ -29,6 +29,8 @@ interface WidgetConfig {
   text?: string;
   speed?: "slow" | "normal" | "fast";
   format?: "12" | "24";
+  clockStyle?: "digital" | "analog";
+  timezone?: string;
   bgColor?: string;
   textColor?: string;
 }
