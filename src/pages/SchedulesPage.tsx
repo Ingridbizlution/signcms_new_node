@@ -389,13 +389,13 @@ export default function SchedulesPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {isAdmin && <Switch checked={schedule.enabled} onCheckedChange={() => toggleEnabled(schedule.id, schedule.enabled)} />}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedId(expandedId === schedule.id ? null : schedule.id)} title={t("schedPlayOrder")}>
                         {expandedId === schedule.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
                       {isAdmin && (
                         <>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)}><Pencil className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)}><Trash2 className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(schedule)} title={t("schedEditTitle")}><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(schedule.id)} title={t("schedDeleted")}><Trash2 className="w-4 h-4" /></Button>
                         </>
                       )}
                     </div>
