@@ -892,7 +892,7 @@ const MediaPage = () => {
             {previewItem && (
               <PreviewInfoPanel item={previewItem} getProjectName={getProjectName} t={t} />
             )}
-            {isAdmin && previewItem && (
+            {isAdmin && previewItem && !previewItem.is_system && (
               <div className="flex justify-end">
                 <Button variant="destructive" size="sm" className="gap-2" onClick={() => { requestDelete(previewItem.id); setPreviewItem(null); }}>
                   <Trash2 className="w-4 h-4" />
