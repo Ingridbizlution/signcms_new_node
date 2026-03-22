@@ -202,7 +202,7 @@ export default function ScreensPage() {
       if (error) toast.error(error.message);
       else { toast.success(t("screensUpdated")); logActivity({ action: "編輯螢幕", category: "screen", targetName: form.name, targetId: editingId, orgId: form.org_id }); }
     } else {
-      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, uploaded_by: user?.id, serial_number: form.serial_number, ip_address: form.ip_address, connection_type: form.connection_type, avg_upload_speed: form.avg_upload_speed, avg_download_speed: form.avg_download_speed });
+      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, uploaded_by: user?.id, serial_number: form.serial_number, ip_address: form.ip_address, connection_type: form.connection_type, avg_upload_speed: form.avg_upload_speed, avg_download_speed: form.avg_download_speed, firmware_version: form.firmware_version });
       if (error) toast.error(error.message);
       else { toast.success(t("screensAdded")); logActivity({ action: "新增螢幕", category: "screen", targetName: form.name, orgId: form.org_id }); }
     }
