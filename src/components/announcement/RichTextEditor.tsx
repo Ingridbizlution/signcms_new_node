@@ -267,7 +267,7 @@ const RichTextEditor = ({ content, onChange, placeholder, minHeight = "160px" }:
         <div className="w-px h-6 bg-border mx-1" />
 
         {/* Insert Image */}
-        <ToolbarButton onClick={() => imageInputRef.current?.click()} title="Insert Image">
+        <ToolbarButton onClick={() => imageInputRef.current?.click()} title={t("tipInsertImage")}>
           <ImagePlus className="h-4 w-4" />
         </ToolbarButton>
         <input
