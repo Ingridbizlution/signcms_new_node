@@ -79,11 +79,36 @@ const CustomerServicePage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>("1");
   const [inputText, setInputText] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [messagesMap, setMessagesMap] = useState<Record<string, ChatMessage[]>>(INITIAL_MESSAGES);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const currentMessages = messagesMap[selectedCustomer] || [];
 
   const selected = MOCK_CUSTOMERS.find((c) => c.id === selectedCustomer);
   const filtered = MOCK_CUSTOMERS.filter((c) =>
     c.name.includes(searchText) || c.lastMessage.includes(searchText)
   );
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [currentMessages.length, selectedCustomer]);
+
+  const handleSend = useCallback(() => {
+    if (!inputText.trim()) return;
+    const agentMsg: ChatMessage = {
+      id: Date.now().toString(),
+      sender: "agent",
+      content: inputText,
+      time: now(),
+    };
+    setMessagesMap((prev) => ({
+      ...prev,
+      [selectedCustomer]: [...(prev[selectedCustomer] || []), agentMsg],
+    }));
+    setInputText("");
+  }, [inputText, selectedCustomer]);
 
   return (
     <DashboardLayout>
