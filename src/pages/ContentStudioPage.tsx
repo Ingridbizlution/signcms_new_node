@@ -238,6 +238,25 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia }: {
                 <div key={m.id + i} className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs">
                   {m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Film className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                   <span className="truncate flex-1 text-foreground">{m.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {m.type === "video" ? (
+                      <span className="text-[10px] text-muted-foreground">{m.duration || 10}s</span>
+                    ) : (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                          const updated = [...mediaItems];
+                          updated[i] = { ...m, duration: Math.max(1, (m.duration || 5) - 1) };
+                          onUpdate({ ...content, mediaItems: updated });
+                        }}><Minus className="w-2.5 h-2.5" /></Button>
+                        <span className="text-[10px] font-medium text-foreground w-5 text-center">{m.duration || 5}s</span>
+                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                          const updated = [...mediaItems];
+                          updated[i] = { ...m, duration: Math.min(60, (m.duration || 5) + 1) };
+                          onUpdate({ ...content, mediaItems: updated });
+                        }}><Plus className="w-2.5 h-2.5" /></Button>
+                      </>
+                    )}
+                  </div>
                   <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => removeMedia(m.id)}><X className="w-3 h-3" /></Button>
                 </div>
               ))}
