@@ -967,9 +967,12 @@ export default function ContentStudioPage() {
                   )}
 
                   {/* Resize handle bottom-right */}
-                  <div data-resize="true" className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end"
-                    onMouseDown={(e) => handleOverlayResizeStart(e, overlay.id, "se")}>
-                    <Maximize2 className="w-3 h-3 text-white/60 rotate-90" />
+                  {!overlay.locked && (
+                    <div data-resize="true" className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end"
+                      onMouseDown={(e) => handleOverlayResizeStart(e, overlay.id, "se")}>
+                      <Maximize2 className="w-3 h-3 text-white/60 rotate-90" />
+                    </div>
+                  )}
                   </div>
                 </div>
               );
