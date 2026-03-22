@@ -160,7 +160,7 @@ const AnnouncementPage = () => {
   };
 
   const handlePublish = () => {
-    if (!subject.trim() || !content.trim() || !startDate || !endDate) {
+    if (!subject.trim() || !content || content === "<p></p>" || !startDate || !endDate) {
       toast.error(t("errorFill"));
       return;
     }
