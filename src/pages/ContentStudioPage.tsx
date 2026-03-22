@@ -390,12 +390,46 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
 
           {/* Unified multi-select picker */}
           {showContentPicker && (
-            <div className="mt-2 border border-border rounded-md p-2 bg-card max-h-40 overflow-y-auto space-y-0.5">
-              {pickerItems.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
-              ) : (
-                <>
-                  {pickerItems.map((item) => {
+            <div className="mt-2 border border-border rounded-md p-2 bg-card space-y-1.5">
+              {/* Search bar */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                <Input
+                  className="h-7 text-[11px] pl-7 pr-2"
+                  placeholder={t("pickerSearchPlaceholder")}
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                />
+              </div>
+              {/* Filter & Sort row */}
+              <div className="flex items-center gap-1">
+                <div className="flex gap-0.5 flex-1">
+                  {(["all", "image", "video", "widget"] as const).map((f) => (
+                    <Button key={f} variant={pickerFilter === f ? "default" : "ghost"} size="sm"
+                      className="h-5 text-[9px] px-1.5 flex-1"
+                      onClick={() => setPickerFilter(f)}>
+                      {t(`pickerFilter_${f}`)}
+                    </Button>
+                  ))}
+                </div>
+                <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title={t("pickerSort")}
+                  onClick={() => {
+                    const order: Array<typeof pickerSort> = ["name-asc", "name-desc", "newest", "oldest"];
+                    setPickerSort(order[(order.indexOf(pickerSort) + 1) % order.length]);
+                  }}>
+                  {pickerSort === "name-asc" ? <ArrowDownAZ className="w-3 h-3" /> :
+                   pickerSort === "name-desc" ? <ArrowUpAZ className="w-3 h-3" /> :
+                   <ArrowUpDown className="w-3 h-3" />}
+                </Button>
+              </div>
+              {/* Sort indicator */}
+              <p className="text-[9px] text-muted-foreground">{t(`pickerSort_${pickerSort}`)}</p>
+              {/* Items list */}
+              <div className="max-h-32 overflow-y-auto space-y-0.5">
+                {filteredPickerItems.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                ) : (
+                  filteredPickerItems.map((item) => {
                     const isSelected = selectedPickerIds.has(item.id);
                     return (
                       <button key={item.id} className={`w-full flex items-center gap-2 p-1.5 rounded text-left text-xs transition-colors ${isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"}`}
@@ -408,17 +442,17 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
                         <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{item.kind === "media" ? (item.type === "image" ? "IMG" : "VID") : "Widget"}</Badge>
                       </button>
                     );
-                  })}
-                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-border">
-                    <span className="text-[10px] text-muted-foreground">
-                      {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
-                    </span>
-                    <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
-                      <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
-                    </Button>
-                  </div>
-                </>
-              )}
+                  })
+                )}
+              </div>
+              <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                <span className="text-[10px] text-muted-foreground">
+                  {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
+                </span>
+                <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
+                  <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
+                </Button>
+              </div>
             </div>
           )}
         </div>
