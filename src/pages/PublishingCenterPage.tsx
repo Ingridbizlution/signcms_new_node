@@ -92,8 +92,8 @@ export default function PublishingCenterPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [schedRes, screenRes, recordRes] = await Promise.all([
-      (supabase as any).from("schedules").select("id, name, screen_id, screens:screen_id(name)").order("name"),
-      (supabase as any).from("screens").select("id, name, branch, online").order("branch, name"),
+      (supabase as any).from("schedules").select("id, name, org_id, screen_id, screens:screen_id(name)").order("name"),
+      (supabase as any).from("screens").select("id, name, branch, online, org_id").order("branch, name"),
       (supabase as any).from("publish_records").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
 
@@ -106,10 +106,11 @@ export default function PublishingCenterPage() {
     setSchedules((schedRes.data || []).map((s: any) => ({
       id: s.id,
       name: s.name,
+      org_id: s.org_id || null,
       screen_name: s.screens?.name || "-",
       items_count: countMap.get(s.id) || 0,
     })));
-    setScreens((screenRes.data || []) as ScreenOption[]);
+    setScreens((screenRes.data || []).map((s: any) => ({ ...s, org_id: s.org_id || null })) as ScreenOption[]);
     setRecords((recordRes.data || []) as PublishRecord[]);
     setLoading(false);
   }, []);
