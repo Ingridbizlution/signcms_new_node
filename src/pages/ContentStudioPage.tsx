@@ -29,6 +29,8 @@ interface ZoneContent {
   bgColor?: string;
   fontSize?: number;
   textColor?: string;
+  textAlign?: "left" | "center" | "right";
+}
 }
 
 interface LayoutPreset {
