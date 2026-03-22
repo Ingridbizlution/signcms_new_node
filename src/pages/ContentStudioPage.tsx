@@ -327,8 +327,8 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
     onUpdate({ ...content, type: "media", mediaItems: [...mediaItems, newItem] });
   };
 
-  const removeMedia = (id: string) => {
-    const updated = mediaItems.filter((m) => m.id !== id);
+  const removeMedia = (id: string, index?: number) => {
+    const updated = mediaItems.filter((m, i) => !(m.id === id && (index === undefined || i === index)));
     onUpdate({ ...content, mediaItems: updated, type: updated.length > 0 ? "media" : "color" });
   };
 
