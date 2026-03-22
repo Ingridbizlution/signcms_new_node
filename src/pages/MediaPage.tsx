@@ -305,6 +305,8 @@ const MediaPage = () => {
   const [editProjectName, setEditProjectName] = useState("");
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [updatingProjectItemId, setUpdatingProjectItemId] = useState<string | null>(null);
+  const [widgetDialogOpen, setWidgetDialogOpen] = useState(false);
+  const [widgetForm, setWidgetForm] = useState(defaultWidgetForm);
 
   const fetchMedia = async () => {
     setLoading(true);
