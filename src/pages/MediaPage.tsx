@@ -19,7 +19,18 @@ import {
   Pencil,
   Plus,
   Settings2,
+  Code2,
+  Calendar,
+  Globe,
+  Type,
+  CloudSun,
+  QrCode,
+  Timer,
+  Youtube,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { Switch } from "@/components/ui/switch";
+import { DialogClose } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
