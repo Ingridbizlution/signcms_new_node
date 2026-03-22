@@ -36,7 +36,7 @@ interface MediaItem {
 type CarouselTransition = "fade" | "slide" | "zoom" | "none";
 
 interface ZoneContent {
-  type: "text" | "media" | "color";
+  type: "text" | "media" | "color" | "widget";
   value: string;
   bgColor?: string;
   fontSize?: number;
@@ -45,6 +45,9 @@ interface ZoneContent {
   mediaItems?: MediaItem[];
   carouselInterval?: number; // seconds
   carouselTransition?: CarouselTransition;
+  widgetId?: string;
+  widgetName?: string;
+  widgetConfig?: any;
 }
 
 interface Zone {
