@@ -9,8 +9,9 @@ import {
   Monitor, Smartphone, LayoutGrid, Columns2, Rows2, Square,
   Type, ImageIcon, Film, Palette, Upload, Trash2, ChevronRight,
   Utensils, PartyPopper, ShoppingBag, Sun, Gift, Coffee,
-  X, GripVertical, Plus
+  X, GripVertical, Plus, AlignLeft, AlignCenter, AlignRight, Minus
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
 // ── Types ──────────────────────────────────────────────────────────
 type AspectRatio = "16:9" | "9:16";
