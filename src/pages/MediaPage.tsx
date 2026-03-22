@@ -578,15 +578,43 @@ export default function MediaPage() {
             </div>
 
             {widgetForm.widgetType === "clock" && (
-              <div className="space-y-2">
-                <Label>{t("widgetFormat")}</Label>
-                <Select value={widgetForm.format} onValueChange={(v) => setWidgetForm({ ...widgetForm, format: v as "12" | "24" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24">{t("widgetFormat24")}</SelectItem>
-                    <SelectItem value="12">{t("widgetFormat12")}</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>{t("widgetClockStyle")}</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setWidgetForm({ ...widgetForm, clockStyle: "digital" })}
+                      className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 transition-all text-sm ${widgetForm.clockStyle === "digital" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:border-primary/40"}`}>
+                      {t("widgetDigital")}
+                    </button>
+                    <button type="button" onClick={() => setWidgetForm({ ...widgetForm, clockStyle: "analog" })}
+                      className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border-2 transition-all text-sm ${widgetForm.clockStyle === "analog" ? "border-primary bg-primary/5 text-primary font-medium" : "border-border hover:border-primary/40"}`}>
+                      {t("widgetAnalog")}
+                    </button>
+                  </div>
+                </div>
+                {widgetForm.clockStyle === "digital" && (
+                  <div className="space-y-2">
+                    <Label>{t("widgetFormat")}</Label>
+                    <Select value={widgetForm.format} onValueChange={(v) => setWidgetForm({ ...widgetForm, format: v as "12" | "24" })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="24">{t("widgetFormat24")}</SelectItem>
+                        <SelectItem value="12">{t("widgetFormat12")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>{t("widgetTimezone")}</Label>
+                  <Select value={widgetForm.timezone} onValueChange={(v) => setWidgetForm({ ...widgetForm, timezone: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {TIMEZONE_OPTIONS.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
 
