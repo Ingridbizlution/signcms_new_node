@@ -13,10 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, Search, Wifi, Settings, CalendarClock, AlertTriangle, Monitor,
   RefreshCw, Building2, FileText, Download, User, LogIn, LogOut, Plus, Pencil,
-  Trash2, Send, ShieldCheck, Image, Brush, ChevronLeft, ChevronRight,
+  Trash2, Send, ShieldCheck, Image, Brush, ChevronLeft, ChevronRight, BarChart3, Play, Clock,
 } from "lucide-react";
-import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, isAfter, subDays } from "date-fns";
 import * as XLSX from "xlsx";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // --- Device log types ---
 interface DeviceLog {
@@ -117,6 +118,10 @@ export default function SystemLogsPage() {
   const [activityPage, setActivityPage] = useState(1);
   const ACTIVITY_PAGE_SIZE = 50;
 
+  // --- Playback reports state ---
+  const [playbackLogs, setPlaybackLogs] = useState<{ id: string; media_name: string; duration_seconds: number; played_at: string; org_id: string | null }[]>([]);
+  const [playbackLoading, setPlaybackLoading] = useState(true);
+
   // --- Shared ---
   const [profileMap, setProfileMap] = useState<Map<string, string>>(new Map());
 
@@ -151,10 +156,17 @@ export default function SystemLogsPage() {
     setActivityLoading(false);
   };
 
+  const fetchPlaybackLogs = async () => {
+    setPlaybackLoading(true);
+    const { data } = await (supabase as any).from("playback_logs").select("*").order("played_at", { ascending: false }).limit(1000);
+    setPlaybackLogs(data || []);
+    setPlaybackLoading(false);
+  };
+
   const fetchAll = async () => {
     const pMap = await fetchProfiles();
     setProfileMap(pMap);
-    await Promise.all([fetchDeviceLogs(pMap), fetchActivityLogs(pMap)]);
+    await Promise.all([fetchDeviceLogs(pMap), fetchActivityLogs(pMap), fetchPlaybackLogs()]);
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -200,6 +212,34 @@ export default function SystemLogsPage() {
   const activityTotalPages = Math.max(1, Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE));
   const paginatedActivity = filteredActivity.slice((activityPage - 1) * ACTIVITY_PAGE_SIZE, activityPage * ACTIVITY_PAGE_SIZE);
 
+  // --- Playback computed data ---
+  const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
+
+  const playbackSummary = useMemo(() => {
+    const map = new Map<string, { count: number; totalSeconds: number }>();
+    playbackLogs.forEach(l => {
+      const existing = map.get(l.media_name) || { count: 0, totalSeconds: 0 };
+      existing.count += 1;
+      existing.totalSeconds += l.duration_seconds;
+      map.set(l.media_name, existing);
+    });
+    return Array.from(map.entries())
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.count - a.count);
+  }, [playbackLogs]);
+
+  const playbackTrend = useMemo(() => {
+    const days: { date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const day = subDays(new Date(), i);
+      const dayStr = format(day, "yyyy-MM-dd");
+      const label = format(day, "MM/dd");
+      const count = playbackLogs.filter(l => format(new Date(l.played_at), "yyyy-MM-dd") === dayStr).length;
+      days.push({ date: label, count });
+    }
+    return days;
+  }, [playbackLogs]);
+
   const labels = {
     title: { zh: "系統紀錄", en: "System Logs", ja: "システムログ" },
     subtitle: { zh: "查看設備狀態與使用者操作紀錄", en: "View device status and user activity logs", ja: "デバイスステータスとユーザー操作ログを表示" },
@@ -218,6 +258,7 @@ export default function SystemLogsPage() {
     today: { zh: "今天", en: "Today", ja: "今日" },
     thisWeek: { zh: "本週", en: "This Week", ja: "今週" },
     thisMonth: { zh: "本月", en: "This Month", ja: "今月" },
+    tabPlayback: { zh: "播放日誌", en: "Playback Reports", ja: "再生レポート" },
   };
 
   const handleExportDeviceExcel = () => {
@@ -272,12 +313,15 @@ export default function SystemLogsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-sm grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="device" className="gap-1.5">
             <Monitor className="w-3.5 h-3.5" />{labels.tabDevice[language]}
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <User className="w-3.5 h-3.5" />{labels.tabActivity[language]}
+          </TabsTrigger>
+          <TabsTrigger value="playback" className="gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5" />{labels.tabPlayback[language]}
           </TabsTrigger>
         </TabsList>
 
@@ -468,6 +512,98 @@ export default function SystemLogsPage() {
                 </div>
               )}
             </Card>
+          )}
+        </TabsContent>
+
+        {/* ===== Playback Reports Tab ===== */}
+        <TabsContent value="playback" className="space-y-6 mt-4">
+          {playbackLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+          ) : playbackLogs.length === 0 ? (
+            <Card className="p-12 text-center text-muted-foreground"><BarChart3 className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>{{ zh: "暫無播放紀錄", en: "No playback data", ja: "再生データなし" }[language]}</p></Card>
+          ) : (
+            <>
+              {/* 7-day trend chart */}
+              <Card className="p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary" />
+                  {{ zh: "過去 7 天播放趨勢", en: "7-Day Playback Trend", ja: "過去7日間の再生トレンド" }[language]}
+                </h3>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={playbackTrend} barSize={32}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} className="fill-muted-foreground" />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 13 }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
+                      formatter={(value: number) => [value, { zh: "播放次數", en: "Plays", ja: "再生回数" }[language]]}
+                    />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Summary table */}
+              <Card className="overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-border/50">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Play className="w-4 h-4 text-primary" />
+                    {{ zh: "廣告播放統計", en: "Ad Playback Statistics", ja: "広告再生統計" }[language]}
+                  </h3>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>{{ zh: "廣告名稱", en: "Ad Name", ja: "広告名" }[language]}</TableHead>
+                      <TableHead className="w-[140px] text-right">{{ zh: "總播放次數", en: "Total Plays", ja: "総再生回数" }[language]}</TableHead>
+                      <TableHead className="w-[140px] text-right">{{ zh: "總播放時數", en: "Total Duration", ja: "総再生時間" }[language]}</TableHead>
+                      <TableHead className="w-[120px]">{{ zh: "佔比", en: "Share", ja: "割合" }[language]}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {playbackSummary.map((item, i) => {
+                      const totalPlays = playbackSummary.reduce((s, x) => s + x.count, 0);
+                      const pct = totalPlays > 0 ? Math.round((item.count / totalPlays) * 100) : 0;
+                      const hours = Math.floor(item.totalSeconds / 3600);
+                      const mins = Math.floor((item.totalSeconds % 3600) / 60);
+                      const secs = item.totalSeconds % 60;
+                      const durationStr = hours > 0 ? `${hours}h ${mins}m` : mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+                      return (
+                        <TableRow key={item.name} className={i === 0 ? "bg-primary/5" : ""}>
+                          <TableCell className="py-2.5 text-sm font-bold text-muted-foreground">{i + 1}</TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                              <span className={`text-sm font-medium ${i === 0 ? "text-primary" : "text-foreground"}`}>{item.name}</span>
+                              {i === 0 && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-0">🔥 TOP</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2.5 text-right">
+                            <span className="text-sm font-semibold text-foreground">{item.count.toLocaleString()}</span>
+                            <span className="text-xs text-muted-foreground ml-1">{{ zh: "次", en: "plays", ja: "回" }[language]}</span>
+                          </TableCell>
+                          <TableCell className="py-2.5 text-right">
+                            <span className="flex items-center justify-end gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />{durationStr}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground w-8 text-right">{pct}%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
           )}
         </TabsContent>
       </Tabs>
