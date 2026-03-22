@@ -25,6 +25,9 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { isAdmin } = useUserRole();
+
+  const filteredItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
