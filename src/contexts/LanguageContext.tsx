@@ -43,13 +43,25 @@ const translations = {
   // Dashboard
   dashTitle: { zh: "總覽儀表板", en: "Dashboard", ja: "ダッシュボード" },
   dashSubtitle: { zh: "即時監控所有群組電子看板狀態", en: "Monitor all group digital signage in real-time", ja: "全グループのデジタルサイネージをリアルタイム監視" },
-  dashOnlineScreens: { zh: "在線螢幕", en: "Online Screens", ja: "オンラインスクリーン" },
+  // dashOnlineScreens: { zh: "在線機器", en: "Online Screens", ja: "オンラインスクリーン" },
+  dashOnlineScreens: { zh: "在線機器", en: "Online Devices", ja: "オンラインデバイス" },
   dashRunningNormal: { zh: "運行正常", en: "Running normally", ja: "正常稼働中" },
-  dashOfflineWarning: { zh: "離線螢幕警告", en: "Offline Warnings", ja: "オフライン警告" },
+  dashOfflineWarning: { zh: "離線機器警告", en: "Offline Warnings", ja: "オフライン警告" },
+  dashTotalDevices: {
+  zh: "機器總數",
+  en: "Total Devices",
+  ja: "デバイス総数"
+},
+
+unknown: {
+  zh: "未知",
+  en: "Unknown",
+  ja: "不明"
+},
   dashNeedCheck: { zh: "需要檢查", en: "Needs attention", ja: "要確認" },
   dashTodayPlays: { zh: "今日預計播放", en: "Today's Plays", ja: "本日再生予定" },
   dashPlayCount: { zh: "次廣告輪播", en: "ad rotations", ja: "回広告ローテーション" },
-  dashScreenList: { zh: "群組螢幕列表", en: "Group Screen List", ja: "グループスクリーン一覧" },
+  dashScreenList: { zh: "群組機器列表", en: "Group Screen List", ja: "グループスクリーン一覧" },
   dashJustNow: { zh: "剛剛", en: "Just now", ja: "たった今" },
   dashMinAgo: { zh: "分鐘前", en: "min ago", ja: "分前" },
   dashScheduleOverview: { zh: "排程總覽", en: "Schedule Overview", ja: "スケジュール概要" },
@@ -58,12 +70,12 @@ const translations = {
   dashItems: { zh: "素材數", en: "Items", ja: "素材数" },
   dashDuration: { zh: "時長(秒)", en: "Duration(s)", ja: "時間(秒)" },
   dashStatus: { zh: "狀態", en: "Status", ja: "ステータス" },
-  dashScreen: { zh: "螢幕", en: "Screen", ja: "スクリーン" },
+  dashScreen: { zh: "機器", en: "Screen", ja: "スクリーン" },
   dashUsedIn: { zh: "次", en: "times", ja: "回" },
   dashTotalMedia: { zh: "素材總數", en: "Total Media", ja: "メディア合計" },
   dashTotalSchedules: { zh: "啟用排程", en: "Active Schedules", ja: "有効スケジュール" },
   dashByType: { zh: "素材類型分佈", en: "Media by Type", ja: "メディアタイプ分布" },
-  dashByBranch: { zh: "各群組螢幕數", en: "Screens by Group", ja: "グループ別スクリーン数" },
+  dashByBranch: { zh: "各群組機器數", en: "Devices by Group", ja: "グループ別スクリーン数" },
 
   // Screens
   screensTitle: { zh: "螢幕管理", en: "Screen Management", ja: "スクリーン管理" },
