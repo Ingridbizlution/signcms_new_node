@@ -567,8 +567,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import {
   CalendarClock, Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown,
   Play, Clock, Monitor, FileImage, FileVideo, X, Loader2, Layers, Code2, Building2,
@@ -587,7 +585,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { logActivity } from "@/lib/activityLogger";
+import { mockScreens } from "@/mock/screensMockData";
+import * as mediaMockModule from "@/mock/mediaMockData";
+import { mockSchedules } from "@/mock/schedulesMockData";
 
 type PlaylistItemType = "media" | "design_project" | "widget";
 
@@ -634,6 +634,61 @@ interface FormPlaylistItem {
   duration: number;
 }
 
+
+type RawMockMediaItem = Record<string, any>;
+
+function normalizeMockMediaType(value: any, item?: RawMockMediaItem): "image" | "video" | "widget" {
+  const raw = String(
+    value ??
+    item?.type ??
+    item?.media_type ??
+    item?.item_type ??
+    item?.sub_type ??
+    item?.category ??
+    item?.kind ??
+    item?.file_type ??
+    item?.mime_type ??
+    ""
+  ).toLowerCase();
+
+  if (raw.includes("widget")) return "widget";
+  if (raw.includes("video") || raw.includes("mp4") || raw.includes("mov") || raw.includes("webm")) return "video";
+  return "image";
+}
+
+function extractMockMediaOptions(): { media: MediaOption[]; widgets: WidgetOption[] } {
+  const moduleCandidate = mediaMockModule as Record<string, any>;
+  const directArray = Array.isArray(moduleCandidate.default)
+    ? moduleCandidate.default
+    : Array.isArray(moduleCandidate.mockMedia)
+      ? moduleCandidate.mockMedia
+      : Array.isArray(moduleCandidate.mockMediaData)
+        ? moduleCandidate.mockMediaData
+        : Array.isArray(moduleCandidate.mediaMockData)
+          ? moduleCandidate.mediaMockData
+          : Array.isArray(moduleCandidate.mediaItems)
+            ? moduleCandidate.mediaItems
+            : null;
+
+  const inferredArray = directArray || Object.values(moduleCandidate).find(
+    (value) => Array.isArray(value) && value.every((item) => item && typeof item === "object")
+  );
+
+  const rawList = (Array.isArray(inferredArray) ? inferredArray : []) as RawMockMediaItem[];
+
+  const normalized = rawList.map((item, index) => {
+    const id = String(item.id ?? item.media_id ?? item.uuid ?? item.key ?? `mock-media-${index + 1}`);
+    const name = String(item.name ?? item.title ?? item.file_name ?? item.filename ?? item.label ?? `素材 ${index + 1}`);
+    const type = normalizeMockMediaType(item.type, item);
+    return { id, name, type };
+  });
+
+  return {
+    media: normalized.filter((item) => item.type !== "widget"),
+    widgets: normalized.filter((item) => item.type === "widget").map((item) => ({ id: item.id, name: item.name })),
+  };
+}
+
 function ItemIcon({ subType }: { subType: "image" | "video" | "design" | "widget" }) {
   if (subType === "design") return <Layers className="w-4 h-4 text-primary shrink-0" />;
   if (subType === "widget") return <Code2 className="w-4 h-4 text-accent-foreground shrink-0" />;
@@ -651,7 +706,6 @@ function SmallItemIcon({ subType }: { subType: "image" | "video" | "design" | "w
 export default function SchedulesPage() {
   const { isAdmin } = useUserRole();
   const { t, language } = useLanguage();
-  const { user } = useAuth();
   const { orgs, defaultOrgId } = useUserOrgs();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [screenOptions, setScreenOptions] = useState<ScreenOption[]>([]);
@@ -685,67 +739,63 @@ export default function SchedulesPage() {
   const allDaysRaw = ["一", "二", "三", "四", "五", "六", "日"];
   const dayLabels = dayKeys.map((k) => t(k));
 
-  const fetchAll = async () => {
-    setLoading(true);
+  const buildScreenOptions = () => {
+    const screenMapById = new Map<string, ScreenOption>();
 
-    const { data: screensData } = await (supabase as any).from("screens").select("id, name, branch").order("branch");
-    const opts: ScreenOption[] = (screensData || []).map((s: any) => ({ id: s.id, label: `${s.branch} - ${s.name}` }));
-    setScreenOptions(opts);
-
-    const { data: mediaData } = await (supabase as any).from("media_items").select("id, name, type").order("created_at", { ascending: false });
-    const allMedia = mediaData || [];
-    setMediaOptions(allMedia.filter((m: any) => m.type !== "widget"));
-    setWidgetOptions(allMedia.filter((m: any) => m.type === "widget"));
-
-    const { data: designData } = await (supabase as any).from("design_projects").select("id, name, aspect").order("updated_at", { ascending: false });
-    setDesignOptions(designData || []);
-
-    const { data: schedData } = await (supabase as any).from("schedules").select("*").order("created_at");
-
-    const { data: itemsData } = await (supabase as any).from("schedule_items")
-      .select("id, schedule_id, media_id, design_project_id, item_type, sort_order, duration")
-      .order("sort_order");
-
-    const mediaMap = new Map(allMedia.map((m: any) => [m.id, m]));
-    const designMap = new Map((designData || []).map((d: any) => [d.id, d]));
-    const screenMap = new Map(opts.map((s) => [s.id, s.label]));
-
-    const merged: Schedule[] = (schedData || []).map((s: any) => {
-      const schedItems: PlaylistItem[] = (itemsData || [])
-        .filter((i: any) => i.schedule_id === s.id)
-        .map((i: any) => {
-          if (i.item_type === "design_project") {
-            const d = designMap.get(i.design_project_id) as any;
-            return {
-              id: i.id, media_id: null, design_project_id: i.design_project_id,
-              item_type: "design_project" as PlaylistItemType,
-              item_name: d?.name || "Unknown", item_sub_type: "design" as const,
-              duration: i.duration, sort_order: i.sort_order,
-            };
-          }
-          const m = mediaMap.get(i.media_id) as any;
-          const isWidget = m?.type === "widget";
-          return {
-            id: i.id, media_id: i.media_id, design_project_id: null,
-            item_type: (isWidget ? "widget" : "media") as PlaylistItemType,
-            item_name: m?.name || "Unknown", item_sub_type: (isWidget ? "widget" : (m?.type || "image")) as "image" | "video" | "widget",
-            duration: i.duration, sort_order: i.sort_order,
-          };
-        });
-      return {
-        id: s.id, name: s.name, org_id: s.org_id || null, screen_id: s.screen_id,
-        screen_label: screenMap.get(s.screen_id) || "",
-        start_time: s.start_time, end_time: s.end_time,
-        days: s.days || [], start_date: s.start_date || null, end_date: s.end_date || null,
-        enabled: s.enabled, items: schedItems,
-      };
+    (mockScreens || []).forEach((s) => {
+      const branch = s.branch?.trim() || "未分館";
+      const name = s.name?.trim() || `螢幕 ${s.id}`;
+      screenMapById.set(String(s.id), {
+        id: String(s.id),
+        label: `${branch} - ${name}`,
+      });
     });
 
-    setSchedules(merged);
-    setLoading(false);
+    return Array.from(screenMapById.values()).sort((a, b) =>
+      a.label.localeCompare(b.label, "zh-Hant")
+    );
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const buildScheduleScreenLabel = (screenId: string) => {
+    const matched = (mockScreens || []).find((screen) => String(screen.id) === String(screenId));
+    if (!matched) return "";
+    const branch = matched.branch?.trim() || "未分館";
+    const name = matched.name?.trim() || `螢幕 ${matched.id}`;
+    return `${branch} - ${name}`;
+  };
+
+  const buildMockSchedules = (): Schedule[] => {
+    return (mockSchedules || []).map((schedule) => ({
+      ...schedule,
+      screen_id: String(schedule.screen_id),
+      screen_label: schedule.screen_label || buildScheduleScreenLabel(String(schedule.screen_id)),
+      items: (schedule.items || []).map((item, index) => ({
+        ...item,
+        sort_order: typeof item.sort_order === "number" ? item.sort_order : index,
+      })),
+    }));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+
+    setScreenOptions(buildScreenOptions());
+    setSchedules(buildMockSchedules());
+
+    const mockMedia = extractMockMediaOptions();
+    setMediaOptions(mockMedia.media);
+    setWidgetOptions(mockMedia.widgets);
+
+    setDesignOptions([]);
+    setLoading(false);
+  }, []);
+
+
+
+  const createId = () => {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+    return `mock-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  };
 
   const filteredSchedules = useMemo(() => {
     if (filterOrgId === "all") return schedules;
@@ -794,72 +844,64 @@ export default function SchedulesPage() {
 
     setSaving(true);
 
+    const selectedScreen = screenOptions.find((screen) => screen.id === form.screen_id);
+    const nextItems: PlaylistItem[] = form.items.map((item, index) => ({
+      id: createId(),
+      media_id: item.media_id,
+      design_project_id: item.design_project_id,
+      item_type: item.item_type,
+      item_name: item.item_name,
+      item_sub_type: item.item_sub_type,
+      duration: item.duration,
+      sort_order: index,
+    }));
+
+    const nextSchedule: Schedule = {
+      id: editingId || createId(),
+      name: form.name,
+      org_id: defaultOrgId || null,
+      screen_id: form.screen_id,
+      screen_label: selectedScreen?.label || "",
+      start_time: form.startTime,
+      end_time: form.endTime,
+      days: form.mode === "weekly" ? form.days : [],
+      start_date: form.mode === "calendar" ? form.startDate : null,
+      end_date: form.mode === "calendar" ? form.endDate : null,
+      enabled: true,
+      items: nextItems,
+    };
+
     if (editingId) {
-      await (supabase as any).from("schedules").update({
-        name: form.name,
-        screen_id: form.screen_id,
-        start_time: form.startTime,
-        end_time: form.endTime,
-        days: form.mode === "weekly" ? form.days : [],
-        start_date: form.mode === "calendar" ? form.startDate : null,
-        end_date: form.mode === "calendar" ? form.endDate : null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", editingId);
-
-      await (supabase as any).from("schedule_items").delete().eq("schedule_id", editingId);
-      const items = form.items.map((item, i) => ({
-        schedule_id: editingId, media_id: item.media_id, design_project_id: item.design_project_id,
-        item_type: item.item_type === "widget" ? "media" : item.item_type, sort_order: i, duration: item.duration,
-      }));
-      await (supabase as any).from("schedule_items").insert(items);
+      setSchedules((prev) => prev.map((schedule) => (
+        schedule.id === editingId
+          ? { ...nextSchedule, enabled: schedule.enabled, org_id: schedule.org_id }
+          : schedule
+      )));
       toast.success(t("schedUpdated"));
-      logActivity({ action: "編輯排程", category: "schedule", targetName: form.name, targetId: editingId! });
     } else {
-      const { data: newSched, error } = await (supabase as any).from("schedules").insert({
-        name: form.name,
-        screen_id: form.screen_id,
-        start_time: form.startTime,
-        end_time: form.endTime,
-        days: form.mode === "weekly" ? form.days : [],
-        start_date: form.mode === "calendar" ? form.startDate : null,
-        end_date: form.mode === "calendar" ? form.endDate : null,
-        created_by: user?.id,
-        org_id: defaultOrgId,
-      }).select("id").single();
-
-      if (error) { toast.error(error.message); setSaving(false); return; }
-
-      const items = form.items.map((item, i) => ({
-        schedule_id: newSched.id, media_id: item.media_id, design_project_id: item.design_project_id,
-        item_type: item.item_type === "widget" ? "media" : item.item_type, sort_order: i, duration: item.duration,
-      }));
-      await (supabase as any).from("schedule_items").insert(items);
+      setSchedules((prev) => [...prev, nextSchedule]);
       toast.success(t("schedAdded"));
-      logActivity({ action: "新增排程", category: "schedule", targetName: form.name });
     }
 
     setSaving(false);
     setDialogOpen(false);
-    fetchAll();
+    setEditingId(null);
+    setForm(createEmptyForm());
   };
 
   const handleDelete = async () => {
     if (deleteId) {
-      const { error } = await (supabase as any).from("schedules").delete().eq("id", deleteId);
-      if (error) toast.error(error.message);
-      else {
-        const deleted = schedules.find(s => s.id === deleteId);
-        toast.success(t("schedDeleted"));
-        logActivity({ action: "刪除排程", category: "schedule", targetName: deleted?.name || "", targetId: deleteId });
-        fetchAll();
-      }
+      setSchedules((prev) => prev.filter((schedule) => schedule.id !== deleteId));
+      toast.success(t("schedDeleted"));
       setDeleteId(null);
+      if (expandedId === deleteId) setExpandedId(null);
     }
   };
 
   const toggleEnabled = async (id: string, current: boolean) => {
-    await (supabase as any).from("schedules").update({ enabled: !current }).eq("id", id);
-    fetchAll();
+    setSchedules((prev) => prev.map((schedule) => (
+      schedule.id === id ? { ...schedule, enabled: !current } : schedule
+    )));
   };
 
   const addMediaToForm = (media: MediaOption) => {
@@ -872,26 +914,10 @@ export default function SchedulesPage() {
   };
 
   const addDesignToForm = async (dp: DesignProjectOption) => {
-    let loopDuration = 15;
-    try {
-      const { data } = await (supabase as any).from("design_projects").select("zones").eq("id", dp.id).single();
-      if (data?.zones && Array.isArray(data.zones)) {
-        // Each zone may have mediaItems with individual durations.
-        // A single loop = the max zone duration (each zone plays its carousel independently).
-        // Zone duration = sum of all its media item durations.
-        const zoneDurations = (data.zones as any[]).map((zone: any) => {
-          const items = zone.content?.mediaItems;
-          if (!Array.isArray(items) || items.length === 0) return 0;
-          return items.reduce((sum: number, m: any) => sum + (m.duration || 5), 0);
-        });
-        const maxDur = Math.max(...zoneDurations, 0);
-        if (maxDur > 0) loopDuration = Math.round(maxDur);
-      }
-    } catch { }
     const item: FormPlaylistItem = {
       tempId: Date.now() + Math.random(), media_id: null, design_project_id: dp.id,
       item_type: "design_project", item_name: dp.name, item_sub_type: "design",
-      duration: loopDuration,
+      duration: 15,
     };
     setForm((prev) => ({ ...prev, items: [...prev.items, item] }));
   };
@@ -1221,3 +1247,6 @@ export default function SchedulesPage() {
     </div>
   );
 }
+
+
+
