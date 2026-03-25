@@ -1,5 +1,83 @@
+// import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// import { BrowserRouter, Route, Routes } from "react-router-dom";
+// import { ThemeProvider } from "next-themes";
+// import { Toaster as Sonner } from "@/components/ui/sonner";
+// import { Toaster } from "@/components/ui/toaster";
+// import { TooltipProvider } from "@/components/ui/tooltip";
+// import { AuthProvider } from "@/contexts/AuthContext";
+// import { LanguageProvider } from "@/contexts/LanguageContext";
+// import { InstalledAppsProvider } from "@/contexts/InstalledAppsContext";
+// import { ProtectedRoute } from "@/components/ProtectedRoute";
+// import Index from "./pages/Index.tsx";
+// import Admin from "./pages/Admin.tsx";
+// import Screens from "./pages/Screens.tsx";
+// import Media from "./pages/Media.tsx";
+// import Schedules from "./pages/Schedules.tsx";
+// import Publishing from "./pages/Publishing.tsx";
+// import DeviceLogs from "./pages/DeviceLogs.tsx";
+// import ContentStudio from "./pages/ContentStudio.tsx";
+// import AppStore from "./pages/AppStore.tsx";
+// import Announcement from "./pages/Announcement.tsx";
+// import Queue from "./pages/Queue.tsx";
+// import MeetingRoom from "./pages/MeetingRoom.tsx";
+// import CustomerServicePage from "./pages/CustomerServicePage.tsx";
+// import KnowledgeBasePage from "./pages/KnowledgeBasePage.tsx";
+// import IoTDashboard from "./pages/IoTDashboard.tsx";
+// import AuthPage from "./pages/AuthPage.tsx";
+// import ForgotPasswordPage from "./pages/ForgotPasswordPage.tsx";
+// import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
+// import NotFound from "./pages/NotFound.tsx";
+// import ChatWidget from "./components/ChatWidget.tsx";
+
+// const queryClient = new QueryClient();
+
+// // App root component`
+// const App = () => (
+//   <QueryClientProvider client={queryClient}>
+//     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+//       <LanguageProvider>
+//         <TooltipProvider>
+//           <Toaster />
+//           <Sonner />
+//           <BrowserRouter>
+//             <AuthProvider>
+//               <InstalledAppsProvider>
+//                 <Routes>
+//                   <Route path="/auth" element={<AuthPage />} />
+//                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+//                   <Route path="/reset-password" element={<ResetPasswordPage />} />
+//                   <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+//                   <Route path="/screens" element={<ProtectedRoute><Screens /></ProtectedRoute>} />
+//                   <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
+//                   <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
+//                   <Route path="/studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
+//                   <Route path="/publishing" element={<ProtectedRoute><Publishing /></ProtectedRoute>} />
+//                   <Route path="/device-logs" element={<ProtectedRoute><DeviceLogs /></ProtectedRoute>} />
+//                   <Route path="/app-store" element={<ProtectedRoute><AppStore /></ProtectedRoute>} />
+//                   <Route path="/announcement" element={<ProtectedRoute><Announcement /></ProtectedRoute>} />
+//                   <Route path="/queue" element={<ProtectedRoute><Queue /></ProtectedRoute>} />
+//                   <Route path="/meeting-room" element={<ProtectedRoute><MeetingRoom /></ProtectedRoute>} />
+//                   <Route path="/customer-service" element={<ProtectedRoute><CustomerServicePage /></ProtectedRoute>} />
+//                   <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
+//                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+//                   <Route path="/iot-dashboard" element={<ProtectedRoute><IoTDashboard /></ProtectedRoute>} />
+//                   <Route path="*" element={<NotFound />} />
+//                 </Routes>
+//                 <ChatWidget />
+//               </InstalledAppsProvider>
+//             </AuthProvider>
+//           </BrowserRouter>
+//         </TooltipProvider>
+//       </LanguageProvider>
+//     </ThemeProvider>
+//   </QueryClientProvider>
+// );
+
+// export default App;
+
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -31,7 +109,7 @@ import ChatWidget from "./components/ChatWidget.tsx";
 
 const queryClient = new QueryClient();
 
-// App root component`
+// App root component
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -39,7 +117,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <HashRouter>
             <AuthProvider>
               <InstalledAppsProvider>
                 <Routes>
@@ -66,7 +144,7 @@ const App = () => (
                 <ChatWidget />
               </InstalledAppsProvider>
             </AuthProvider>
-          </BrowserRouter>
+          </HashRouter>
         </TooltipProvider>
       </LanguageProvider>
     </ThemeProvider>
