@@ -124,21 +124,21 @@ const App = () => (
                   <Route path="/auth" element={<AuthPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
-                  <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                  <Route path="/screens" element={<ProtectedRoute><Screens /></ProtectedRoute>} />
-                  <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
-                  <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
-                  <Route path="/studio" element={<ProtectedRoute><ContentStudio /></ProtectedRoute>} />
-                  <Route path="/publishing" element={<ProtectedRoute><Publishing /></ProtectedRoute>} />
-                  <Route path="/device-logs" element={<ProtectedRoute><DeviceLogs /></ProtectedRoute>} />
-                  <Route path="/app-store" element={<ProtectedRoute><AppStore /></ProtectedRoute>} />
-                  <Route path="/announcement" element={<ProtectedRoute><Announcement /></ProtectedRoute>} />
-                  <Route path="/queue" element={<ProtectedRoute><Queue /></ProtectedRoute>} />
-                  <Route path="/meeting-room" element={<ProtectedRoute><MeetingRoom /></ProtectedRoute>} />
-                  <Route path="/customer-service" element={<ProtectedRoute><CustomerServicePage /></ProtectedRoute>} />
-                  <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
-                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                  <Route path="/iot-dashboard" element={<ProtectedRoute><IoTDashboard /></ProtectedRoute>} />
+                  <Route path="/" element={<Index />} />
+                  <Route path="/screens" element={<Screens />} />
+                  <Route path="/media" element={<Media />} />
+                  <Route path="/schedules" element={<Schedules />} />
+                  <Route path="/studio" element={<ContentStudio />} />
+                  <Route path="/publishing" element={<Publishing />} />
+                  <Route path="/device-logs" element={<DeviceLogs />} />
+                  <Route path="/app-store" element={<AppStore />} />
+                  <Route path="/announcement" element={<Announcement />} />
+                  <Route path="/queue" element={<Queue />} />
+                  <Route path="/meeting-room" element={<MeetingRoom />} />
+                  <Route path="/customer-service" element={<CustomerServicePage />} />
+                  <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/iot-dashboard" element={<IoTDashboard />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <ChatWidget />
