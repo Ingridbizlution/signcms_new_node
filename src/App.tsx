@@ -31,7 +31,7 @@ import ChatWidget from "./components/ChatWidget.tsx";
 
 const queryClient = new QueryClient();
 
-// App root component
+// App root component`
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -43,7 +43,7 @@ const App = () => (
             <AuthProvider>
               <InstalledAppsProvider>
                 <Routes>
-                  {/* <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/auth" element={<AuthPage />} />
                   <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
@@ -61,26 +61,6 @@ const App = () => (
                   <Route path="/knowledge-base" element={<ProtectedRoute><KnowledgeBasePage /></ProtectedRoute>} />
                   <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                   <Route path="/iot-dashboard" element={<ProtectedRoute><IoTDashboard /></ProtectedRoute>} />
-                  <Route path="*" element={<NotFound />} /> */}
-
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                  <Route path="/reset-password" element={<ResetPasswordPage />} />
-                  <Route path="/" element={<><Index /></>} />
-                  <Route path="/screens" element={<><Screens /></>} />
-                  <Route path="/media" element={<><Media /></>} />
-                  <Route path="/schedules" element={<><Schedules /></>} />
-                  <Route path="/studio" element={<><ContentStudio /></>} />
-                  <Route path="/publishing" element={<><Publishing /></>} />
-                  <Route path="/device-logs" element={<><DeviceLogs /></>} />
-                  <Route path="/app-store" element={<><AppStore /></>} />
-                  <Route path="/announcement" element={<><Announcement /></>} />
-                  <Route path="/queue" element={<><Queue /></>} />
-                  <Route path="/meeting-room" element={<><MeetingRoom /></>} />
-                  <Route path="/customer-service" element={<><CustomerServicePage /></>} />
-                  <Route path="/knowledge-base" element={<><KnowledgeBasePage /></>} />
-                  <Route path="/admin" element={<><Admin /></>} />
-                  <Route path="/iot-dashboard" element={<><IoTDashboard /></>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <ChatWidget />

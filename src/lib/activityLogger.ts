@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/apiClient";
+import { readStoredAuth } from "@/lib/authStorage";
 
 interface LogActivityParams {
   action: string;
@@ -26,19 +27,21 @@ async function getClientIp(): Promise<string> {
 
 export async function logActivity(params: LogActivityParams) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const auth = readStoredAuth();
+    if (!auth?.token) return;
     const ip = await getClientIp();
-    await (supabase as any).from("activity_logs").insert({
-      user_id: user.id,
-      action: params.action,
-      category: params.category,
-      target_type: params.targetType || "",
-      target_id: params.targetId || "",
-      target_name: params.targetName || "",
-      detail: params.detail || "",
-      org_id: params.orgId || null,
-      ip_address: ip,
+    await apiFetch("/activity-logs", {
+      method: "POST",
+      body: JSON.stringify({
+        action: params.action,
+        category: params.category,
+        targetType: params.targetType || "",
+        targetId: params.targetId || "",
+        targetName: params.targetName || "",
+        detail: params.detail || "",
+        orgId: params.orgId || null,
+        ipAddress: ip,
+      }),
     });
   } catch {
     // Silent fail - logging should never block user operations

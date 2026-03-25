@@ -1,0 +1,28 @@
+import * as mediaService from "../services/media.service.js";
+
+export async function list(req, res, next) {
+  try {
+    const data = await mediaService.listMedia(req.query);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function upload(req, res, next) {
+  try {
+    const data = await mediaService.createMedia({ file: req.file, body: req.body, userId: req.user.id });
+    res.status(201).json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function remove(req, res, next) {
+  try {
+    await mediaService.deleteMedia(req.params.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}

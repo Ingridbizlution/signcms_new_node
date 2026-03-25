@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { requestPasswordReset } from "@/lib/authClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,14 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [resetPath, setResetPath] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
-      if (error) throw error;
+      const data = await requestPasswordReset(email) as { resetUrl?: string };
+      setResetPath(data.resetUrl || null);
       setSent(true);
       toast.success(t("forgotSent"));
     } catch (error: any) {
@@ -44,8 +45,13 @@ export default function ForgotPasswordPage() {
             {sent ? (
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  {t("forgotSentDesc")} <strong>{email}</strong>{t("forgotClickLink")}
+                  已建立重設密碼連結。開發模式可直接點下面按鈕前往重設頁。
                 </p>
+                {resetPath && (
+                  <a href={resetPath}>
+                    <Button>前往重設密碼</Button>
+                  </a>
+                )}
                 <Link to="/auth">
                   <Button variant="outline" className="gap-2"><ArrowLeft className="w-4 h-4" />{t("forgotBackToLogin")}</Button>
                 </Link>

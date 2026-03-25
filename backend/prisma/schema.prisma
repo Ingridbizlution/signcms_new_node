@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String              @id @default(cuid())
+  email          String              @unique
+  passwordHash   String
+  name           String?
+  role           String              @default("admin")
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organizations  Organization[]      @relation("OrganizationCreator")
+  mediaItems     MediaItem[]         @relation("MediaCreator")
+  passwordResets PasswordResetToken[]
+  activityLogs   ActivityLog[]
+}
+
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  code        String?     @unique
+  description String?
+  status      String      @default("active")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdBy   String?
+  creator     User?       @relation("OrganizationCreator", fields: [createdBy], references: [id])
+  mediaItems  MediaItem[]
+}
+
+model MediaItem {
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  mimeType     String?
+  filePath     String
+  fileUrl      String
+  fileSize     Int?
+  tags         String?
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  organizationId String?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  createdBy    String?
+  creator      User?         @relation("MediaCreator", fields: [createdBy], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  category   String
+  targetType String?
+  targetId   String?
+  targetName String?
+  detail     String?
+  orgId      String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}

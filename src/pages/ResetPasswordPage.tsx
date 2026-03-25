@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { resetPassword } from "@/lib/authClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,29 +15,24 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRecovery, setIsRecovery] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get("type") === "recovery") setIsRecovery(true);
-    supabase.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") setIsRecovery(true); });
-  }, []);
+  const token = new URLSearchParams(window.location.search).get("token") || "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token) { toast.error(t("resetInvalidLink")); return; }
     if (password !== confirmPassword) { toast.error(t("resetMismatch")); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      await resetPassword(token, password);
       toast.success(t("resetSuccess"));
-      navigate("/");
-    } catch (error: any) { toast.error(error.message || t("resetFailed")); }
-    finally { setLoading(false); }
+      navigate("/auth");
+    } catch (error: any) {
+      toast.error(error.message || t("resetFailed"));
+    } finally { setLoading(false); }
   };
 
-  if (!isRecovery) return (
+  if (!token) return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardContent className="pt-6 text-center">

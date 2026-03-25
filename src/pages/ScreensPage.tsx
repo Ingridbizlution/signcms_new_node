@@ -5,7 +5,11 @@ import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { mockScreens } from "@/mock/screensMockData";
 import { Card } from "@/components/ui/card";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +63,7 @@ export default function ScreensPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline" | "ungrouped">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -153,18 +158,13 @@ export default function ScreensPage() {
 
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
 
-  const fetchScreens = async () => {
+
+  // use mock json
+  const fetchScreens = () => {
     setLoading(true);
-    const { data, error } = await (supabase as any).from("screens").select("id, name, branch, location, resolution, online, org_id, serial_number, ip_address, connection_type, avg_upload_speed, avg_download_speed, firmware_version").order("created_at", { ascending: true });
-    if (error) { toast.error(error.message); }
-    else {
-      setScreens(data || []);
-      const uniqueGroups = Array.from(new Set((data || []).map((s: Screen) => s.branch).filter(Boolean))) as string[];
-      setGroups((prev) => {
-        const merged = new Set([...prev, ...uniqueGroups]);
-        return Array.from(merged).sort();
-      });
-    }
+    setScreens(mockScreens);
+    const uniqueGroups = Array.from(new Set(mockScreens.map((s) => s.branch).filter(Boolean))).sort();
+    setGroups(uniqueGroups);
     setLoading(false);
   };
 
@@ -174,9 +174,13 @@ export default function ScreensPage() {
 
   const filtered = screens.filter((s) => {
     const matchSearch = s.name.includes(search) || (s.branch || "").includes(search) || s.location.includes(search);
-    if (groupFilter === "all") return matchSearch;
-    if (groupFilter === UNGROUPED) return matchSearch && !s.branch;
-    return matchSearch && s.branch === groupFilter;
+    const matchGroup = groupFilter === "all" ? true : groupFilter === UNGROUPED ? !s.branch : s.branch === groupFilter;
+    const matchStatus =
+      statusFilter === "all" ? true :
+      statusFilter === "online" ? s.online :
+      statusFilter === "offline" ? !s.online :
+      statusFilter === "ungrouped" ? !s.branch : true;
+    return matchSearch && matchGroup && matchStatus;
   });
 
   const openAdd = () => { setEditingId(null); setForm({ ...emptyForm, org_id: defaultOrgId || "" }); setIsCreatingInForm(false); setInlineNewGroup(""); setDialogOpen(true); };
@@ -197,15 +201,44 @@ export default function ScreensPage() {
     const finalBranch = isCreatingInForm ? inlineNewGroup.trim() : form.branch;
     if (!form.name) { toast.error(t("screensFillRequired")); return; }
     setSaving(true);
+
     if (editingId) {
-      const { error } = await (supabase as any).from("screens").update({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, serial_number: form.serial_number, ip_address: form.ip_address, connection_type: form.connection_type, avg_upload_speed: form.avg_upload_speed, avg_download_speed: form.avg_download_speed, firmware_version: form.firmware_version, updated_at: new Date().toISOString() }).eq("id", editingId);
-      if (error) toast.error(error.message);
-      else { toast.success(t("screensUpdated")); logActivity({ action: "編輯螢幕", category: "screen", targetName: form.name, targetId: editingId, orgId: form.org_id }); }
+      setScreens((prev) => prev.map((s) => s.id === editingId ? {
+        ...s,
+        name: form.name,
+        branch: finalBranch,
+        location: form.location,
+        resolution: form.resolution,
+        serial_number: form.serial_number,
+        ip_address: form.ip_address,
+        connection_type: form.connection_type,
+        avg_upload_speed: form.avg_upload_speed,
+        avg_download_speed: form.avg_download_speed,
+        firmware_version: form.firmware_version,
+      } : s));
+      toast.success(t("screensUpdated"));
+      logActivity({ action: "編輯螢幕", category: "screen", targetName: form.name, targetId: editingId, orgId: form.org_id });
     } else {
-      const { error } = await (supabase as any).from("screens").insert({ name: form.name, branch: finalBranch || "", location: form.location, resolution: form.resolution, org_id: form.org_id || null, uploaded_by: user?.id, serial_number: form.serial_number, ip_address: form.ip_address, connection_type: form.connection_type, avg_upload_speed: form.avg_upload_speed, avg_download_speed: form.avg_download_speed, firmware_version: form.firmware_version });
-      if (error) toast.error(error.message);
-      else { toast.success(t("screensAdded")); logActivity({ action: "新增螢幕", category: "screen", targetName: form.name, orgId: form.org_id }); }
+      const newScreen: Screen = {
+        id: String(Date.now()),
+        name: form.name,
+        branch: finalBranch,
+        location: form.location,
+        resolution: form.resolution,
+        online: false,
+        org_id: form.org_id || null,
+        serial_number: form.serial_number,
+        ip_address: form.ip_address,
+        connection_type: form.connection_type,
+        avg_upload_speed: form.avg_upload_speed,
+        avg_download_speed: form.avg_download_speed,
+        firmware_version: form.firmware_version,
+      };
+      setScreens((prev) => [...prev, newScreen]);
+      toast.success(t("screensAdded"));
+      logActivity({ action: "新增螢幕", category: "screen", targetName: form.name, orgId: form.org_id });
     }
+
     if (isCreatingInForm && inlineNewGroup.trim()) {
       setGroups((prev) => Array.from(new Set([...prev, inlineNewGroup.trim()])).sort());
     }
@@ -213,19 +246,14 @@ export default function ScreensPage() {
     setDialogOpen(false);
     setIsCreatingInForm(false);
     setInlineNewGroup("");
-    fetchScreens();
   };
 
   const handleDelete = async () => {
     if (deleteId) {
-      const { error } = await (supabase as any).from("screens").delete().eq("id", deleteId);
-      if (error) toast.error(error.message);
-      else {
-        const deleted = screens.find(s => s.id === deleteId);
-        toast.success(t("screensDeleted"));
-        logActivity({ action: "刪除螢幕", category: "screen", targetName: deleted?.name || "", targetId: deleteId });
-        fetchScreens();
-      }
+      const deleted = screens.find((s) => s.id === deleteId);
+      setScreens((prev) => prev.filter((s) => s.id !== deleteId));
+      toast.success(t("screensDeleted"));
+      logActivity({ action: "刪除螢幕", category: "screen", targetName: deleted?.name || "", targetId: deleteId });
       setDeleteId(null);
     }
   };
@@ -245,26 +273,22 @@ export default function ScreensPage() {
     if (!newName || !renameTarget) return;
     if (newName === renameTarget) { setRenameDialogOpen(false); return; }
     if (groups.includes(newName)) { toast.error(t("screensGroupExists")); return; }
-    // Update all screens with old group name
-    const { error } = await (supabase as any).from("screens").update({ branch: newName, updated_at: new Date().toISOString() }).eq("branch", renameTarget);
-    if (error) { toast.error(error.message); return; }
+    // 本階段：僅更新前端狀態，不寫回 API（群組 CRUD 暫緩）
     setGroups((prev) => prev.map((g) => g === renameTarget ? newName : g).sort());
+    setScreens((prev) => prev.map((s) => s.branch === renameTarget ? { ...s, branch: newName } : s));
     if (groupFilter === renameTarget) setGroupFilter(newName);
     toast.success(t("screensGroupRenamed"));
     setRenameDialogOpen(false);
-    fetchScreens();
   };
 
   const handleDeleteGroup = async () => {
     if (!deleteGroupTarget) return;
-    // Set screens in this group to empty (ungrouped)
-    const { error } = await (supabase as any).from("screens").update({ branch: "", updated_at: new Date().toISOString() }).eq("branch", deleteGroupTarget);
-    if (error) { toast.error(error.message); return; }
+    // 本階段：僅更新前端狀態，不寫回 API（群組 CRUD 暫緩）
+    setScreens((prev) => prev.map((s) => s.branch === deleteGroupTarget ? { ...s, branch: "" } : s));
     setGroups((prev) => prev.filter((g) => g !== deleteGroupTarget));
     if (groupFilter === deleteGroupTarget) setGroupFilter("all");
     toast.success(t("screensGroupDeleted"));
     setDeleteGroupTarget(null);
-    fetchScreens();
   };
 
   const openRename = (group: string) => {
@@ -274,241 +298,297 @@ export default function ScreensPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-5 max-w-6xl">
+
+      {/* A. 標題列 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t("screensTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t("screensSubtitle")}</p>
         </div>
         {isAdmin && (
-          <div className="flex gap-2 self-start">
-            <Button variant="outline" onClick={() => setNewGroupDialogOpen(true)} className="gap-2" title={t("tipAddScreenGroup")}>
-              <FolderPlus className="w-4 h-4" />
-              {t("screensNewGroup")}
-            </Button>
-            <Button onClick={openAdd} className="gap-2" title={t("tipAddScreen")}>
-              <Plus className="w-4 h-4" />
-              {t("screensAdd")}
-            </Button>
-          </div>
+          <Button onClick={openAdd} className="gap-2 self-start" title={t("tipAddScreen")}>
+            <Plus className="w-4 h-4" />
+            {t("screensAdd")}
+          </Button>
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder={t("screensSearchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={groupFilter} onValueChange={setGroupFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("allGroups")} /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("allGroups")}</SelectItem>
-            <SelectItem value={UNGROUPED}>{t("screensUngrouped")}</SelectItem>
-            {groups.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
-              <SlidersHorizontal className="w-4 h-4" />
+      {/* B. 狀態統計 Pills */}
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            { key: "all",       label: t("allGroups"),        count: screens.length,                            dot: "bg-muted-foreground" },
+            { key: "online",    label: t("online"),           count: screens.filter((s) => s.online).length,    dot: "bg-success" },
+            { key: "offline",   label: t("offline"),          count: screens.filter((s) => !s.online).length,   dot: "bg-destructive" },
+            { key: "ungrouped", label: t("screensUngrouped"), count: screens.filter((s) => !s.branch).length,   dot: "bg-orange-500" },
+          ] as const
+        ).map(({ key, label, count, dot }) => (
+          <button
+            key={key}
+            onClick={() => setStatusFilter(statusFilter === key ? "all" : key)}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+              statusFilter === key
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${dot}`} />
+            {label}
+            <span className="px-2 py-0.5 rounded-full bg-background text-xs font-mono">{count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* C. Toolbar：群組 chips（左）+ 搜尋（右）*/}
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+        <div className="flex flex-wrap gap-2 flex-1">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setNewGroupDialogOpen(true)}
+              className="gap-1.5 h-7 text-xs"
+              title={t("tipAddScreenGroup")}
+            >
+              <FolderPlus className="w-3 h-3" />
+              {t("screensNewGroup")}
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-72" align="end">
-            <div className="space-y-4">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
-                <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
-              </div>
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={uploadThreshold}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value) || 0;
-                      saveThresholds(v, downloadThreshold);
-                    }}
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">下載速率閾值 (Mbps)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={downloadThreshold}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value) || 0;
-                      saveThresholds(uploadThreshold, v);
-                    }}
-                    className="h-8"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
-                <span className="w-2 h-2 rounded-full bg-success" /> 正常
-                <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Group chips */}
-      <div className="flex flex-wrap gap-2 animate-fade-in">
-        {/* Ungrouped chip */}
-        <button
-          onClick={() => setGroupFilter(groupFilter === UNGROUPED ? "all" : UNGROUPED)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-            groupFilter === UNGROUPED
-              ? "bg-muted-foreground text-background"
-              : "bg-muted text-muted-foreground hover:bg-accent"
-          }`}
-        >
-          <Layers className="w-3 h-3" />
-          {t("screensUngrouped")}
-          <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-            groupFilter === UNGROUPED ? "bg-background/20" : "bg-background"
-          }`}>{ungroupedCount}</span>
-        </button>
-
-        {groups.map((g) => {
-          const count = screens.filter((s) => s.branch === g).length;
-          return (
-            <div key={g} className="inline-flex items-center group relative">
-              <button
-                onClick={() => setGroupFilter(groupFilter === g ? "all" : g)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  groupFilter === g
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                } ${isAdmin ? "pr-7" : ""}`}
-              >
-                <Layers className="w-3 h-3" />
-                {g}
-                <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-                  groupFilter === g ? "bg-primary-foreground/20" : "bg-background"
-                }`}>{count}</span>
-              </button>
-              {isAdmin && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10">
-                      <MoreHorizontal className="w-3.5 h-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[140px]">
-                    <DropdownMenuItem onClick={() => openRename(g)} className="gap-2 text-xs">
-                      <Pencil className="w-3.5 h-3.5" />
-                      {t("screensRenameGroup")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setDeleteGroupTarget(g)} className="gap-2 text-xs text-destructive focus:text-destructive">
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {t("screensDeleteGroup")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-      ) : (
-        <div className="grid gap-3">
-          {filtered.length === 0 && (
-            <Card className="p-12 text-center text-muted-foreground">
-              <Monitor className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>{t("screensNoResult")}</p>
-            </Card>
           )}
-          {filtered.map((screen, i) => (
-            <Card key={screen.id} className={`p-4 flex items-center gap-4 hover-lift shadow-sm opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)}`}>
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0" title={t("tipScreen")}>
-                <Monitor className="w-6 h-6 text-muted-foreground/60" />
+          <button
+            onClick={() => setGroupFilter(groupFilter === UNGROUPED ? "all" : UNGROUPED)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              groupFilter === UNGROUPED
+                ? "bg-muted-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            <Layers className="w-3 h-3" />
+            {t("screensUngrouped")}
+            <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === UNGROUPED ? "bg-background/20" : "bg-background"}`}>
+              {ungroupedCount}
+            </span>
+          </button>
+          {groups.map((g) => {
+            const count = screens.filter((s) => s.branch === g).length;
+            return (
+              <div key={g} className="inline-flex items-center group relative">
+                <button
+                  onClick={() => setGroupFilter(groupFilter === g ? "all" : g)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    groupFilter === g
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-accent"
+                  } ${isAdmin ? "pr-7" : ""}`}
+                >
+                  <Layers className="w-3 h-3" />
+                  {g}
+                  <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === g ? "bg-primary-foreground/20" : "bg-background"}`}>
+                    {count}
+                  </span>
+                </button>
+                {isAdmin && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10">
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[140px]">
+                      <DropdownMenuItem onClick={() => openRename(g)} className="gap-2 text-xs">
+                        <Pencil className="w-3.5 h-3.5" />
+                        {t("screensRenameGroup")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDeleteGroupTarget(g)} className="gap-2 text-xs text-destructive focus:text-destructive">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {t("screensDeleteGroup")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-foreground truncate">{screen.name}</h3>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                    screen.online ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${screen.online ? "bg-success" : "bg-destructive"}`} />
-                    {screen.online ? t("online") : t("offline")}
-                  </span>
+            );
+          })}
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder={t("screensSearchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 w-56"
+            />
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
+                <SlidersHorizontal className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
+                  <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                  <span className={`flex items-center gap-1 ${!screen.branch ? "italic opacity-60" : ""}`} title={t("tipGroup")}>
-                    <Layers className="w-3 h-3" />{screen.branch || t("screensUngrouped")}
-                  </span>
-                  {screen.location && <span className="flex items-center gap-1" title={t("tipLocation")}><MapPin className="w-3 h-3" />{screen.location}</span>}
-                  <span title={t("tipResolution")}>{screen.resolution}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]" title={t("tipSerialNumber")}>SN: {screen.serial_number || "—"}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]" title={t("tipIpAddress")}>IP: {screen.ip_address || "—"}</span>
-                  <span className="flex items-center gap-1 font-mono text-[11px]" title={t("tipFirmwareVersion")}>FW: {screen.firmware_version || "—"}</span>
-                  {screen.connection_type && (
-                    <span className="flex items-center gap-1" title={t("tipConnectionType")}>
-                      {screen.connection_type === "wired" ? <Cable className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-                      {screen.connection_type === "wired" ? t("tipWired") : t("tipWireless")}
-                    </span>
-                  )}
-                  {(() => {
-                    const parseSpeed = (s?: string) => {
-                      if (!s) return null;
-                      const match = s.match(/([\d.]+)/);
-                      return match ? parseFloat(match[1]) : null;
-                    };
-                    const up = parseSpeed(screen.avg_upload_speed);
-                    const down = parseSpeed(screen.avg_download_speed);
-                    const hasData = up !== null || down !== null;
-                    const isUpLow = up !== null && up < uploadThreshold;
-                    const isDownLow = down !== null && down < downloadThreshold;
-                    const isWarning = hasData && (isUpLow || isDownLow);
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={uploadThreshold}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value) || 0;
+                        saveThresholds(v, downloadThreshold);
+                      }}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">下載速率閾值 (Mbps)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={downloadThreshold}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value) || 0;
+                        saveThresholds(uploadThreshold, v);
+                      }}
+                      className="h-8"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                  <span className="w-2 h-2 rounded-full bg-success" /> 正常
+                  <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
 
-                    return (
-                      <span title={t("tipNetworkSpeedHealth").replace("{up}", String(uploadThreshold)).replace("{down}", String(downloadThreshold))} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium ${
-                        !hasData
-                          ? "bg-muted text-muted-foreground"
-                          : isWarning
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-success/10 text-success"
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          !hasData ? "bg-muted-foreground/40" : isWarning ? "bg-destructive animate-pulse" : "bg-success"
-                        }`} />
-                        <ArrowUpDown className="w-3 h-3" />
-                        {!hasData ? (
-                          <span>{t("tipSpeedNotSet")}</span>
-                        ) : (
-                          <>
-                            {up !== null && <span className={isUpLow ? "font-bold" : ""}>↑{screen.avg_upload_speed}</span>}
-                            {up !== null && down !== null && <span>/</span>}
-                            {down !== null && <span className={isDownLow ? "font-bold" : ""}>↓{screen.avg_download_speed}</span>}
-                            {isWarning && <span className="text-[10px]">⚠</span>}
-                          </>
-                        )}
+      {/* D. 裝置 Table */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">
+          <Monitor className="w-10 h-10 mx-auto mb-3 opacity-40" />
+          <p>{t("screensNoResult")}</p>
+        </Card>
+      ) : (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-24">狀態</TableHead>
+                <TableHead>裝置名稱</TableHead>
+                <TableHead className="w-32">群組</TableHead>
+                <TableHead className="w-40">地點</TableHead>
+                <TableHead className="w-36">IP 位址</TableHead>
+                <TableHead className="w-36">序號</TableHead>
+                <TableHead className="w-28">解析度</TableHead>
+                {isAdmin && <TableHead className="w-28 text-right">操作</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((screen) => (
+                <TableRow key={screen.id} className="hover:bg-muted/30">
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
+                      screen.online ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${screen.online ? "bg-success" : "bg-muted-foreground"}`} />
+                      {screen.online ? t("online") : t("offline")}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-sm text-foreground">{screen.name}</div>
+                    {screen.firmware_version && (
+                      <div className="text-xs text-muted-foreground font-mono mt-0.5">FW: {screen.firmware_version}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {screen.branch ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                        <Layers className="w-3 h-3" />{screen.branch}
                       </span>
-                    );
-                  })()}
-                </div>
-              </div>
-              {isAdmin && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info(t("screenLiveViewPlaceholder"))} title={t("screenLiveView")}><Eye className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIotScreen(screen)} title={t("tipIotDevices")}><Radio className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSettingsScreen(screen)} title={t("screenSettings")}><Settings className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(screen)} title={t("tipEditScreen")}><Pencil className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(screen.id)} title={t("tipDeleteScreen")}><Trash2 className="w-4 h-4" /></Button>
-                </div>
-              )}
-            </Card>
-          ))}
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">{t("screensUngrouped")}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {screen.location ? (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span className="truncate max-w-[120px]">{screen.location}</span>
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {screen.ip_address || "—"}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {screen.serial_number || "—"}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {screen.resolution || "—"}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEdit(screen)}
+                          title={t("tipEditScreen")}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(screen.id)}
+                          title={t("tipDeleteScreen")}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[160px]">
+                            <DropdownMenuItem onClick={() => setSettingsScreen(screen)} className="gap-2 text-xs">
+                              <Settings className="w-3.5 h-3.5" />
+                              {t("screenSettings")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIotScreen(screen)} className="gap-2 text-xs">
+                              <Radio className="w-3.5 h-3.5" />
+                              {t("tipIotDevices")}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toast.info(t("screenLiveViewPlaceholder"))} className="gap-2 text-xs">
+                              <Eye className="w-3.5 h-3.5" />
+                              {t("screenLiveView")}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
