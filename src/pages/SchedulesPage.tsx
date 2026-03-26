@@ -2086,7 +2086,7 @@ type PlaylistItemType = "media" | "design_project" | "widget";
 type EntryType = "schedule" | "event";
 
 type EventTriggerType = "once" | "repeat" | "hold";
-type EventSourceType = "gpio" | "api" | "keyboard" | "mouse" | "touch";
+type EventSourceType = "gpio" | "api" | "keyboard" | "mouse" | "touch" | "remote";
 type ApiOperator = "=" | ">" | "<" | ">=" | "<=" | "!=";
 type MouseButtonType = "left" | "middle" | "right";
 type MouseActionType = "click" | "dblclick";
@@ -2105,6 +2105,7 @@ interface EventConfig {
   apiValue: string;
 
   keyboardKey: string;
+  remoteKey: string;
 
   mouseRect: string;
   mouseButton: MouseButtonType;
@@ -2265,7 +2266,7 @@ const createDefaultEventConfig = (): EventConfig => ({
   repeatCount: "",
   sourceType: "touch",
 
-  gpioPin: "", //3
+  gpioPin: "3",
 
   apiUrl: "",
   apiRegex: "",
@@ -2273,6 +2274,7 @@ const createDefaultEventConfig = (): EventConfig => ({
   apiValue: "",
 
   keyboardKey: "Enter",
+  remoteKey: "F1",
 
   mouseRect: "10,20,100,50",
   mouseButton: "left",
@@ -2497,6 +2499,11 @@ export default function SchedulesPage() {
 
       if (ec.sourceType === "keyboard" && !ec.keyboardKey.trim()) {
         toast.error("請選擇按鍵代碼");
+        return;
+      }
+
+      if (ec.sourceType === "remote" && !ec.remoteKey.trim()) {
+        toast.error("請選擇遙控器按鍵");
         return;
       }
 
@@ -3086,6 +3093,7 @@ export default function SchedulesPage() {
                       { value: "keyboard", label: "按鍵" },
                       { value: "mouse", label: "滑鼠" },
                       { value: "touch", label: "觸控" },
+                      { value: "remote", label: "遙控器" },
                     ].map((option) => (
                       <label key={option.value} className="flex items-center gap-2 text-sm cursor-pointer">
                         <input
@@ -3159,7 +3167,7 @@ export default function SchedulesPage() {
                               eventConfig: { ...prev.eventConfig, gpioPin: e.target.value },
                             }))
                           }
-                          placeholder="e.g. 17"
+                          placeholder="3"
                           className="rounded-l-none"
                         />
                       </div>
@@ -3281,6 +3289,40 @@ export default function SchedulesPage() {
                           <SelectItem value="ArrowLeft">ArrowLeft</SelectItem>
                           <SelectItem value="ArrowRight">ArrowRight</SelectItem>
                           <SelectItem value="Escape">Escape</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {form.eventConfig.sourceType === "remote" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">遙控器設定</Label>
+                    <div className="grid grid-cols-[105px_1fr] max-w-xs">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        按鍵代碼
+                      </div>
+                      <Select
+                        value={form.eventConfig.remoteKey}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, remoteKey: value },
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="rounded-l-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="F1">F1</SelectItem>
+                          <SelectItem value="F2">F2</SelectItem>
+                          <SelectItem value="F3">F3</SelectItem>
+                          <SelectItem value="F4">F4</SelectItem>
+                          <SelectItem value="F5">F5</SelectItem>
+                          <SelectItem value="F6">F6</SelectItem>
+                          <SelectItem value="F7">F7</SelectItem>
+                          <SelectItem value="F8">F8</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
