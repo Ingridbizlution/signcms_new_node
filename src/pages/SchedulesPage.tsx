@@ -2022,7 +2022,6 @@
 //   );
 // }
 
-
 import { useState, useEffect, useMemo } from "react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
@@ -2086,6 +2085,35 @@ import { mockSchedules } from "@/mock/schedulesMockData";
 type PlaylistItemType = "media" | "design_project" | "widget";
 type EntryType = "schedule" | "event";
 
+type EventTriggerType = "once" | "repeat" | "hold";
+type EventSourceType = "gpio" | "api" | "keyboard" | "mouse" | "touch";
+type ApiOperator = "=" | ">" | "<" | ">=" | "<=" | "!=";
+type MouseButtonType = "left" | "middle" | "right";
+type MouseActionType = "click" | "dblclick";
+type TouchModeType = "split" | "overlay" | "swipe";
+
+interface EventConfig {
+  triggerType: EventTriggerType;
+  repeatCount: string;
+  sourceType: EventSourceType;
+
+  gpioPin: string;
+
+  apiUrl: string;
+  apiRegex: string;
+  apiOperator: ApiOperator;
+  apiValue: string;
+
+  keyboardKey: string;
+
+  mouseRect: string;
+  mouseButton: MouseButtonType;
+  mouseAction: MouseActionType;
+
+  touchMode: TouchModeType;
+  touchTargetId: string;
+}
+
 interface PlaylistItem {
   id: string;
   media_id: string | null;
@@ -2111,6 +2139,7 @@ interface Schedule {
   end_date: string | null;
   enabled: boolean;
   items: PlaylistItem[];
+  event_config?: EventConfig | null;
 }
 
 interface ScreenOption {
@@ -2172,8 +2201,8 @@ function normalizeMockMediaType(
     raw.includes("mp4") ||
     raw.includes("mov") ||
     raw.includes("webm")
-  )
-    return "video";
+  ) return "video";
+
   return "image";
 }
 
@@ -2230,6 +2259,28 @@ function SmallItemIcon({ subType }: { subType: "image" | "video" | "design" | "w
   return <FileImage className="w-3.5 h-3.5 text-muted-foreground shrink-0" />;
 }
 
+const createDefaultEventConfig = (): EventConfig => ({
+  triggerType: "once",
+  repeatCount: "",
+  sourceType: "touch",
+
+  gpioPin: "",
+
+  apiUrl: "",
+  apiRegex: "",
+  apiOperator: "=",
+  apiValue: "",
+
+  keyboardKey: "Enter",
+
+  mouseRect: "10,20,100,50",
+  mouseButton: "left",
+  mouseAction: "click",
+
+  touchMode: "split",
+  touchTargetId: "",
+});
+
 export default function SchedulesPage() {
   const { isAdmin } = useUserRole();
   const { t } = useLanguage();
@@ -2263,6 +2314,7 @@ export default function SchedulesPage() {
     endDate: "",
     items: [] as FormPlaylistItem[],
     joinDefaultSchedule: false,
+    eventConfig: createDefaultEventConfig(),
   });
 
   const [form, setForm] = useState(createEmptyForm);
@@ -2316,6 +2368,7 @@ export default function SchedulesPage() {
       entry_type: (schedule.entry_type as EntryType) || "schedule",
       screen_id: String(schedule.screen_id),
       screen_label: schedule.screen_label || buildScheduleScreenLabel(String(schedule.screen_id)),
+      event_config: schedule.event_config || null,
       items: (schedule.items || []).map((item: any, index: number) => ({
         ...item,
         sort_order: typeof item.sort_order === "number" ? item.sort_order : index,
@@ -2378,6 +2431,12 @@ export default function SchedulesPage() {
       startDate: s.start_date || "",
       endDate: s.end_date || "",
       joinDefaultSchedule: false,
+      eventConfig: s.event_config
+        ? {
+          ...createDefaultEventConfig(),
+          ...s.event_config,
+        }
+        : createDefaultEventConfig(),
       items: s.items.map((i) => ({
         tempId: Math.random(),
         media_id: i.media_id,
@@ -2396,21 +2455,63 @@ export default function SchedulesPage() {
       toast.error(t("schedFillRequired"));
       return;
     }
+
     if (form.items.length === 0) {
       toast.error(t("schedAddItem"));
       return;
     }
+
     if (dialogMode === "schedule" && form.days.length === 0) {
       toast.error(t("schedPlayDays"));
       return;
     }
+
     if (dialogMode === "schedule" && form.enableCalendar && (!form.startDate || !form.endDate)) {
       toast.error("請選擇起訖日期");
       return;
     }
+
     if (dialogMode === "schedule" && form.enableCalendar && form.startDate > form.endDate) {
       toast.error("結束日期不可早於開始日期");
       return;
+    }
+
+    if (dialogMode === "event") {
+      const ec = form.eventConfig;
+
+      if (ec.triggerType === "repeat" && !ec.repeatCount.trim()) {
+        toast.error("請輸入多次觸發的次數");
+        return;
+      }
+
+      if (ec.sourceType === "gpio" && !ec.gpioPin.trim()) {
+        toast.error("請輸入 GPIO Pin 編號");
+        return;
+      }
+
+      if (ec.sourceType === "api" && !ec.apiUrl.trim()) {
+        toast.error("請輸入 API 端點 URL");
+        return;
+      }
+
+      if (ec.sourceType === "keyboard" && !ec.keyboardKey.trim()) {
+        toast.error("請選擇按鍵代碼");
+        return;
+      }
+
+      if (ec.sourceType === "mouse" && !ec.mouseRect.trim()) {
+        toast.error("請輸入滑鼠觸發區域");
+        return;
+      }
+
+      if (
+        ec.sourceType === "touch" &&
+        (ec.touchMode === "split" || ec.touchMode === "overlay") &&
+        !ec.touchTargetId.trim()
+      ) {
+        toast.error("請輸入觸控目標 ID");
+        return;
+      }
     }
 
     setSaving(true);
@@ -2441,6 +2542,7 @@ export default function SchedulesPage() {
       end_date: dialogMode === "schedule" && form.enableCalendar ? form.endDate : null,
       enabled: true,
       items: nextItems,
+      event_config: dialogMode === "event" ? { ...form.eventConfig } : null,
     };
 
     if (editingId) {
@@ -2474,9 +2576,11 @@ export default function SchedulesPage() {
   };
 
   const toggleEnabled = async (id: string, current: boolean) => {
-    setSchedules((prev) => prev.map((schedule) => (
-      schedule.id === id ? { ...schedule, enabled: !current } : schedule
-    )));
+    setSchedules((prev) =>
+      prev.map((schedule) =>
+        schedule.id === id ? { ...schedule, enabled: !current } : schedule
+      )
+    );
   };
 
   const addMediaToForm = (media: MediaOption) => {
@@ -2519,13 +2623,18 @@ export default function SchedulesPage() {
   };
 
   const removeItemFromForm = (tempId: number) => {
-    setForm((prev) => ({ ...prev, items: prev.items.filter((i) => i.tempId !== tempId) }));
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((i) => i.tempId !== tempId),
+    }));
   };
 
   const updateItemDuration = (tempId: number, duration: number) => {
     setForm((prev) => ({
       ...prev,
-      items: prev.items.map((i) => i.tempId === tempId ? { ...i, duration: Math.max(1, duration) } : i),
+      items: prev.items.map((i) =>
+        i.tempId === tempId ? { ...i, duration: Math.max(1, duration) } : i
+      ),
     }));
   };
 
@@ -2564,7 +2673,8 @@ export default function SchedulesPage() {
     }));
   };
 
-  const totalDuration = (items: { duration: number }[]) => items.reduce((sum, i) => sum + i.duration, 0);
+  const totalDuration = (items: { duration: number }[]) =>
+    items.reduce((sum, i) => sum + i.duration, 0);
 
   const formatDuration = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -2592,7 +2702,9 @@ export default function SchedulesPage() {
               <SelectContent>
                 <SelectItem value="all">{t("orgFilterAll")}</SelectItem>
                 {orgs.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
                 ))}
                 <SelectItem value="none">— 未分配 —</SelectItem>
               </SelectContent>
@@ -2632,7 +2744,8 @@ export default function SchedulesPage() {
             {filteredSchedules.map((schedule, i) => (
               <div
                 key={schedule.id}
-                className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${!schedule.enabled ? "[&>*]:opacity-60" : ""}`}
+                className={`opacity-0 animate-fade-in stagger-${Math.min(i + 1, 8)} ${!schedule.enabled ? "[&>*]:opacity-60" : ""
+                  }`}
               >
                 <Card className="hover-lift shadow-sm">
                   <div className="p-4 flex items-start gap-4">
@@ -2645,7 +2758,7 @@ export default function SchedulesPage() {
                         <h3 className="text-sm font-semibold text-foreground">{schedule.name}</h3>
 
                         {schedule.entry_type === "event" && (
-                          <Badge variant="outline" className="ttext-[10px] px-1.5 py-0 bg-red-500 hover:bg-red-500 text-white border-0">
+                          <Badge className="text-[10px] px-1.5 py-0 bg-red-500 hover:bg-red-500 text-white border-0">
                             事件
                           </Badge>
                         )}
@@ -2750,11 +2863,18 @@ export default function SchedulesPage() {
 
                   {expandedId === schedule.id && (
                     <div className="border-t border-border px-4 py-3 bg-muted/30">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">{t("schedPlayOrder")}</p>
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">
+                        {schedule.entry_type === "event" ? "事件播放內容" : t("schedPlayOrder")}
+                      </p>
                       <div className="space-y-1.5">
                         {schedule.items.map((item, index) => (
-                          <div key={item.id} className="flex items-center gap-3 bg-card rounded-lg px-3 py-2 text-sm">
-                            <span className="text-muted-foreground text-xs w-5 text-center">{index + 1}</span>
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-3 bg-card rounded-lg px-3 py-2 text-sm"
+                          >
+                            <span className="text-muted-foreground text-xs w-5 text-center">
+                              {index + 1}
+                            </span>
                             <ItemIcon subType={item.item_sub_type} />
                             <span className="flex-1 truncate text-foreground">{item.item_name}</span>
                             {item.item_sub_type === "design" && (
@@ -2768,7 +2888,8 @@ export default function SchedulesPage() {
                               </Badge>
                             )}
                             <span className="text-xs text-muted-foreground">
-                              {item.duration}{t("seconds")}
+                              {item.duration}
+                              {t("seconds")}
                             </span>
                           </div>
                         ))}
@@ -2783,7 +2904,7 @@ export default function SchedulesPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingId
@@ -2839,9 +2960,10 @@ export default function SchedulesPage() {
                   value={form.screen_group}
                   onValueChange={(value) => {
                     setForm((prev) => {
-                      const nextScreens = value === "all"
-                        ? screenOptions
-                        : screenOptions.filter((screen) => screen.groupLabel === value);
+                      const nextScreens =
+                        value === "all"
+                          ? screenOptions
+                          : screenOptions.filter((screen) => screen.groupLabel === value);
                       const keepScreen = nextScreens.some((screen) => screen.id === prev.screen_id);
                       return {
                         ...prev,
@@ -2863,14 +2985,18 @@ export default function SchedulesPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground">可先依設備群組篩選，再指定要派送的螢幕。</p>
+                <p className="text-[11px] text-muted-foreground">
+                  可先依設備群組篩選，再指定要派送的螢幕。
+                </p>
               </div>
             </div>
 
             {dialogMode === "schedule" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-                  <Label htmlFor="enable-calendar" className="text-sm font-medium">啟用日曆</Label>
+                  <Label htmlFor="enable-calendar" className="text-sm font-medium">
+                    啟用日曆
+                  </Label>
                   <Switch
                     id="enable-calendar"
                     checked={form.enableCalendar}
@@ -2943,6 +3069,410 @@ export default function SchedulesPage() {
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {dialogMode === "event" && (
+              <div className="space-y-4 rounded-lg border border-border p-4">
+                <h3 className="text-base font-semibold text-foreground">事件觸發設定</h3>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">觸發種類</Label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="event-trigger-type"
+                        checked={form.eventConfig.triggerType === "once"}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, triggerType: "once" },
+                          }))
+                        }
+                      />
+                      <span>單次</span>
+                    </label>
+
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="event-trigger-type"
+                          checked={form.eventConfig.triggerType === "repeat"}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, triggerType: "repeat" },
+                            }))
+                          }
+                        />
+                        <span>多次</span>
+                      </label>
+
+                      {form.eventConfig.triggerType === "repeat" && (
+                        <div className="max-w-xs">
+                          <div className="grid grid-cols-[100px_1fr]">
+                            <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                              次數
+                            </div>
+                            <Input
+                              value={form.eventConfig.repeatCount}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  eventConfig: { ...prev.eventConfig, repeatCount: e.target.value },
+                                }))
+                              }
+                              placeholder="e.g. 5"
+                              className="rounded-l-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="radio"
+                        name="event-trigger-type"
+                        checked={form.eventConfig.triggerType === "hold"}
+                        onChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, triggerType: "hold" },
+                          }))
+                        }
+                      />
+                      <span>保持</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">事件來源</Label>
+                  <div className="space-y-2">
+                    {[
+                      { value: "gpio", label: "GPIO" },
+                      { value: "api", label: "API" },
+                      { value: "keyboard", label: "按鍵" },
+                      { value: "mouse", label: "滑鼠" },
+                      { value: "touch", label: "觸控" },
+                    ].map((option) => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="event-source-type"
+                          checked={form.eventConfig.sourceType === option.value}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: {
+                                ...prev.eventConfig,
+                                sourceType: option.value as EventSourceType,
+                              },
+                            }))
+                          }
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {form.eventConfig.sourceType === "gpio" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">GPIO 設定</Label>
+                    <div className="max-w-xs grid grid-cols-[90px_1fr]">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        Pin 編號
+                      </div>
+                      <Input
+                        value={form.eventConfig.gpioPin}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, gpioPin: e.target.value },
+                          }))
+                        }
+                        placeholder="e.g.17"
+                        className="rounded-l-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {form.eventConfig.sourceType === "api" && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">API 設定</Label>
+
+                    <div className="grid grid-cols-[105px_1fr]">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        端點 URL
+                      </div>
+                      <Input
+                        value={form.eventConfig.apiUrl}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, apiUrl: e.target.value },
+                          }))
+                        }
+                        placeholder="https://example.com/trigger"
+                        className="rounded-l-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-[105px_1fr]">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        正則表示式
+                      </div>
+                      <Input
+                        value={form.eventConfig.apiRegex}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, apiRegex: e.target.value },
+                          }))
+                        }
+                        placeholder="e.g. ^\\d+$"
+                        className="rounded-l-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-[105px_1fr] max-w-sm">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        操作
+                      </div>
+                      <Select
+                        value={form.eventConfig.apiOperator}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: {
+                              ...prev.eventConfig,
+                              apiOperator: value as ApiOperator,
+                            },
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="rounded-l-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="=">=</SelectItem>
+                          <SelectItem value=">">&gt;</SelectItem>
+                          <SelectItem value="<">&lt;</SelectItem>
+                          <SelectItem value=">=">&gt;=</SelectItem>
+                          <SelectItem value="<=">&lt;=</SelectItem>
+                          <SelectItem value="!=">!=</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-[105px_1fr] max-w-sm">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        數值
+                      </div>
+                      <Input
+                        value={form.eventConfig.apiValue}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, apiValue: e.target.value },
+                          }))
+                        }
+                        placeholder="e.g. 100"
+                        className="rounded-l-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {form.eventConfig.sourceType === "keyboard" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">按鍵設定</Label>
+                    <div className="grid grid-cols-[105px_1fr] max-w-xs">
+                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                        按鍵代碼
+                      </div>
+                      <Select
+                        value={form.eventConfig.keyboardKey}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: { ...prev.eventConfig, keyboardKey: value },
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="rounded-l-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Enter">Enter</SelectItem>
+                          <SelectItem value="Space">Space</SelectItem>
+                          <SelectItem value="ArrowUp">ArrowUp</SelectItem>
+                          <SelectItem value="ArrowDown">ArrowDown</SelectItem>
+                          <SelectItem value="ArrowLeft">ArrowLeft</SelectItem>
+                          <SelectItem value="ArrowRight">ArrowRight</SelectItem>
+                          <SelectItem value="Escape">Escape</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {form.eventConfig.sourceType === "mouse" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">滑鼠設定</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1fr] gap-2">
+                      <div className="grid grid-cols-[130px_1fr]">
+                        <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                          Rect (X,Y,W,H)
+                        </div>
+                        <Input
+                          value={form.eventConfig.mouseRect}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, mouseRect: e.target.value },
+                            }))
+                          }
+                          placeholder="10,20,100,50"
+                          className="rounded-l-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-[90px_1fr]">
+                        <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                          按鈕
+                        </div>
+                        <Select
+                          value={form.eventConfig.mouseButton}
+                          onValueChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: {
+                                ...prev.eventConfig,
+                                mouseButton: value as MouseButtonType,
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="rounded-l-none">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="left">左</SelectItem>
+                            <SelectItem value="middle">中</SelectItem>
+                            <SelectItem value="right">右</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-[90px_1fr]">
+                        <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                          點擊種類
+                        </div>
+                        <Select
+                          value={form.eventConfig.mouseAction}
+                          onValueChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: {
+                                ...prev.eventConfig,
+                                mouseAction: value as MouseActionType,
+                              },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="rounded-l-none">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="click">點擊</SelectItem>
+                            <SelectItem value="dblclick">雙擊</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {form.eventConfig.sourceType === "touch" && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">觸控設定</Label>
+
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="touch-mode"
+                          checked={form.eventConfig.touchMode === "split"}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, touchMode: "split" },
+                            }))
+                          }
+                        />
+                        <span>分割區 ID</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="touch-mode"
+                          checked={form.eventConfig.touchMode === "overlay"}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, touchMode: "overlay" },
+                            }))
+                          }
+                        />
+                        <span>覆蓋區 ID</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          name="touch-mode"
+                          checked={form.eventConfig.touchMode === "swipe"}
+                          onChange={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, touchMode: "swipe" },
+                            }))
+                          }
+                        />
+                        <span>滑動</span>
+                      </label>
+                    </div>
+
+                    {(form.eventConfig.touchMode === "split" ||
+                      form.eventConfig.touchMode === "overlay") && (
+                        <div className="grid grid-cols-[105px_1fr] max-w-sm">
+                          <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                            {form.eventConfig.touchMode === "split" ? "分割區 ID" : "覆蓋區 ID"}
+                          </div>
+                          <Input
+                            value={form.eventConfig.touchTargetId}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                eventConfig: { ...prev.eventConfig, touchTargetId: e.target.value },
+                              }))
+                            }
+                            placeholder={
+                              form.eventConfig.touchMode === "split" ? "e.g. header" : "e.g. overlay-1"
+                            }
+                            className="rounded-l-none"
+                          />
+                        </div>
+                      )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -3025,7 +3555,9 @@ export default function SchedulesPage() {
 
               <div className="border-t border-border pt-3 mt-3">
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-xs text-muted-foreground">{t("schedClickToAdd")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {dialogMode === "event" ? "點擊加入事件播放內容" : t("schedClickToAdd")}
+                  </p>
                   <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -3055,7 +3587,9 @@ export default function SchedulesPage() {
 
                   <TabsContent value="media" className="mt-2">
                     {mediaOptions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        {t("mediaNoResult")}
+                      </p>
                     ) : (
                       <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
                         {mediaOptions.map((media) => (
@@ -3079,7 +3613,9 @@ export default function SchedulesPage() {
 
                   <TabsContent value="design" className="mt-2">
                     {designOptions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-2">{t("studioNoProjects")}</p>
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        {t("studioNoProjects")}
+                      </p>
                     ) : (
                       <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
                         {designOptions.map((dp) => (
@@ -3102,7 +3638,9 @@ export default function SchedulesPage() {
 
                   <TabsContent value="widget" className="mt-2">
                     {widgetOptions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+                      <p className="text-xs text-muted-foreground text-center py-2">
+                        {t("mediaNoResult")}
+                      </p>
                     ) : (
                       <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
                         {widgetOptions.map((w) => (
