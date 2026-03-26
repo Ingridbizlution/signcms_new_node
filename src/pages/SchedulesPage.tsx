@@ -1688,8 +1688,19 @@ export default function SchedulesPage() {
             </Select>
           )}
           {isAdmin && (
-            <Button onClick={openAdd} className="gap-2"><Plus className="w-4 h-4" />{t("schedAdd")}</Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={openAdd} className="gap-2">
+                <Plus className="w-4 h-4" />
+                {t("schedAdd")}
+              </Button>
+
+              <Button onClick={openAdd} className="gap-2">
+                <Plus className="w-4 h-4" />
+                新增事件
+              </Button>
+            </div>
           )}
+
         </div>
       </div>
 
