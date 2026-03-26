@@ -2201,8 +2201,9 @@ function normalizeMockMediaType(
     raw.includes("mp4") ||
     raw.includes("mov") ||
     raw.includes("webm")
-  ) return "video";
-
+  ) {
+    return "video";
+  }
   return "image";
 }
 
@@ -2264,7 +2265,7 @@ const createDefaultEventConfig = (): EventConfig => ({
   repeatCount: "",
   sourceType: "touch",
 
-  gpioPin: "",
+  gpioPin: "", //3
 
   apiUrl: "",
   apiRegex: "",
@@ -3077,79 +3078,6 @@ export default function SchedulesPage() {
                 <h3 className="text-base font-semibold text-foreground">事件觸發設定</h3>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold">觸發種類</Label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="event-trigger-type"
-                        checked={form.eventConfig.triggerType === "once"}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            eventConfig: { ...prev.eventConfig, triggerType: "once" },
-                          }))
-                        }
-                      />
-                      <span>單次</span>
-                    </label>
-
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="radio"
-                          name="event-trigger-type"
-                          checked={form.eventConfig.triggerType === "repeat"}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              eventConfig: { ...prev.eventConfig, triggerType: "repeat" },
-                            }))
-                          }
-                        />
-                        <span>多次</span>
-                      </label>
-
-                      {form.eventConfig.triggerType === "repeat" && (
-                        <div className="max-w-xs">
-                          <div className="grid grid-cols-[100px_1fr]">
-                            <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
-                              次數
-                            </div>
-                            <Input
-                              value={form.eventConfig.repeatCount}
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  eventConfig: { ...prev.eventConfig, repeatCount: e.target.value },
-                                }))
-                              }
-                              placeholder="e.g. 5"
-                              className="rounded-l-none"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="event-trigger-type"
-                        checked={form.eventConfig.triggerType === "hold"}
-                        onChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            eventConfig: { ...prev.eventConfig, triggerType: "hold" },
-                          }))
-                        }
-                      />
-                      <span>保持</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
                   <Label className="text-sm font-semibold">事件來源</Label>
                   <div className="space-y-2">
                     {[
@@ -3181,23 +3109,60 @@ export default function SchedulesPage() {
                 </div>
 
                 {form.eventConfig.sourceType === "gpio" && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">GPIO 設定</Label>
-                    <div className="max-w-xs grid grid-cols-[90px_1fr]">
-                      <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
-                        Pin 編號
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">觸發模式</Label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="radio"
+                            name="event-trigger-type"
+                            checked={form.eventConfig.triggerType === "once"}
+                            onChange={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                eventConfig: { ...prev.eventConfig, triggerType: "once" },
+                              }))
+                            }
+                          />
+                          <span>點動模式</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="radio"
+                            name="event-trigger-type"
+                            checked={form.eventConfig.triggerType === "hold"}
+                            onChange={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                eventConfig: { ...prev.eventConfig, triggerType: "hold" },
+                              }))
+                            }
+                          />
+                          <span>開關模式</span>
+                        </label>
                       </div>
-                      <Input
-                        value={form.eventConfig.gpioPin}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            eventConfig: { ...prev.eventConfig, gpioPin: e.target.value },
-                          }))
-                        }
-                        placeholder="e.g.17"
-                        className="rounded-l-none"
-                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">GPIO 設定</Label>
+                      <div className="max-w-xs grid grid-cols-[90px_1fr]">
+                        <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
+                          Pin 編號
+                        </div>
+                        <Input
+                          value={form.eventConfig.gpioPin}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              eventConfig: { ...prev.eventConfig, gpioPin: e.target.value },
+                            }))
+                          }
+                          placeholder="e.g. 17"
+                          className="rounded-l-none"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
