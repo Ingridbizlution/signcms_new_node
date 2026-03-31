@@ -32,7 +32,7 @@ interface MediaItem {
   type: "image" | "video" | "widget";
   url: string;
   name: string;
-  duration?: number; // seconds for carousel auto-advance
+  duration?: number;
   widgetConfig?: any;
 }
 
@@ -46,7 +46,7 @@ interface ZoneContent {
   textColor?: string;
   textAlign?: "left" | "center" | "right";
   mediaItems?: MediaItem[];
-  carouselInterval?: number; // seconds
+  carouselInterval?: number;
   carouselTransition?: CarouselTransition;
   widgetId?: string;
   widgetName?: string;
@@ -67,7 +67,7 @@ interface OverlayBlock {
   w: number;
   h: number;
   label: string;
-  opacity: number; // 0-100
+  opacity: number;
   zIndex: number;
   locked?: boolean;
   content?: ZoneContent;
@@ -142,25 +142,158 @@ function snapToGrid(value: number, step = 5): number {
   return Math.round(value / step) * step;
 }
 
-// ── Collision detection helpers ─────────────────────────────────────
-function isOverlapping(
-  a: { x: number; y: number; w: number; h: number },
-  b: { x: number; y: number; w: number; h: number }
-): boolean {
-  return !(
-    a.x + a.w <= b.x ||
-    a.x >= b.x + b.w ||
-    a.y + a.h <= b.y ||
-    a.y >= b.y + b.h
+// ── DropIntent architecture ────────────────────────────────────────
+type InsertDirection = "left" | "right" | "top" | "bottom";
+
+type DropIntent =
+  | { mode: "none" }
+  | { mode: "free"; x: number; y: number }
+  | { mode: "swap"; targetId: string }
+  | { mode: "insert"; targetId: string; direction: InsertDirection };
+
+function findDropTargetZone(
+  pointerXPercent: number,
+  pointerYPercent: number,
+  zones: Zone[],
+  draggingId: string
+): Zone | null {
+  return (
+    zones.find(
+      (z) =>
+        z.id !== draggingId &&
+        pointerXPercent >= z.x &&
+        pointerXPercent <= z.x + z.w &&
+        pointerYPercent >= z.y &&
+        pointerYPercent <= z.y + z.h
+    ) ?? null
   );
 }
 
-function wouldOverlapAnyZone(
-  nextZone: { x: number; y: number; w: number; h: number },
-  allZones: { id: string; x: number; y: number; w: number; h: number }[],
-  selfId: string
-): boolean {
-  return allZones.some((z) => z.id !== selfId && isOverlapping(nextZone, z));
+function classifyDropOnTarget(
+  pointerXPercent: number,
+  pointerYPercent: number,
+  target: Zone
+): { mode: "swap" } | { mode: "insert"; direction: InsertDirection } {
+  if (target.w === 0 || target.h === 0) return { mode: "swap" };
+  const rx = (pointerXPercent - target.x) / target.w;
+  const ry = (pointerYPercent - target.y) / target.h;
+  if (rx >= 0.3 && rx <= 0.7 && ry >= 0.3 && ry <= 0.7) {
+    return { mode: "swap" };
+  }
+  const distances: Record<InsertDirection, number> = {
+    left: pointerXPercent - target.x,
+    right: target.x + target.w - pointerXPercent,
+    top: pointerYPercent - target.y,
+    bottom: target.y + target.h - pointerYPercent,
+  };
+  const direction = (Object.keys(distances) as InsertDirection[]).reduce((a, b) =>
+    distances[a] <= distances[b] ? a : b
+  );
+  return { mode: "insert", direction };
+}
+
+function resolveDropIntent(
+  pointerXPercent: number,
+  pointerYPercent: number,
+  previewX: number,
+  previewY: number,
+  zones: Zone[],
+  draggingZoneId: string
+): DropIntent {
+  const target = findDropTargetZone(pointerXPercent, pointerYPercent, zones, draggingZoneId);
+  if (!target) {
+    return { mode: "free", x: previewX, y: previewY };
+  }
+  const classification = classifyDropOnTarget(pointerXPercent, pointerYPercent, target);
+  if (classification.mode === "swap") {
+    return { mode: "swap", targetId: target.id };
+  }
+  return { mode: "insert", targetId: target.id, direction: classification.direction };
+}
+
+function applyDropIntent(
+  zones: Zone[],
+  draggingZoneId: string,
+  dragOriginZone: Zone,
+  intent: DropIntent
+): Zone[] {
+  // free / none: dragged zone is already at its preview position in state
+  if (intent.mode === "none" || intent.mode === "free") {
+    return zones;
+  }
+
+  if (intent.mode === "swap") {
+    const target = zones.find((z) => z.id === intent.targetId);
+    if (!target) return zones;
+    // Exchange both position and size so the tiled layout stays intact
+    return zones.map((z) => {
+      if (z.id === draggingZoneId) {
+        return { ...z, x: target.x, y: target.y, w: target.w, h: target.h };
+      }
+      if (z.id === intent.targetId) {
+        return { ...z, x: dragOriginZone.x, y: dragOriginZone.y, w: dragOriginZone.w, h: dragOriginZone.h };
+      }
+      return z;
+    });
+  }
+
+  if (intent.mode === "insert") {
+    const target = zones.find((z) => z.id === intent.targetId);
+    if (!target) return zones;
+    const A = dragOriginZone; // use original dimensions for the dragged zone
+    const B = target;
+    const dir = intent.direction;
+
+    let newAPartial: Partial<Zone> = {};
+    let newBPartial: Partial<Zone> = {};
+
+    if (dir === "left") {
+      // A → left half, B → right half
+      const totalW = Math.round((A.w + B.w) * 100) / 100;
+      const aW = Math.max(10, Math.round((totalW / 2) * 100) / 100);
+      const bW = Math.max(10, Math.round((totalW - aW) * 100) / 100);
+      newAPartial = { x: B.x, y: B.y, w: aW, h: B.h };
+      newBPartial = { x: B.x + aW, y: B.y, w: bW, h: B.h };
+    } else if (dir === "right") {
+      // B → left half, A → right half
+      const totalW = Math.round((A.w + B.w) * 100) / 100;
+      const bW = Math.max(10, Math.round((totalW / 2) * 100) / 100);
+      const aW = Math.max(10, Math.round((totalW - bW) * 100) / 100);
+      newBPartial = { x: B.x, y: B.y, w: bW, h: B.h };
+      newAPartial = { x: B.x + bW, y: B.y, w: aW, h: B.h };
+    } else if (dir === "top") {
+      // A → top half, B → bottom half
+      const totalH = Math.round((A.h + B.h) * 100) / 100;
+      const aH = Math.max(10, Math.round((totalH / 2) * 100) / 100);
+      const bH = Math.max(10, Math.round((totalH - aH) * 100) / 100);
+      newAPartial = { x: B.x, y: B.y, w: B.w, h: aH };
+      newBPartial = { x: B.x, y: B.y + aH, w: B.w, h: bH };
+    } else if (dir === "bottom") {
+      // B → top half, A → bottom half
+      const totalH = Math.round((A.h + B.h) * 100) / 100;
+      const bH = Math.max(10, Math.round((totalH / 2) * 100) / 100);
+      const aH = Math.max(10, Math.round((totalH - bH) * 100) / 100);
+      newBPartial = { x: B.x, y: B.y, w: B.w, h: bH };
+      newAPartial = { x: B.x, y: B.y + bH, w: B.w, h: aH };
+    }
+
+    return zones.map((z) => {
+      if (z.id === draggingZoneId) return { ...z, ...newAPartial };
+      if (z.id === intent.targetId) return { ...z, ...newBPartial };
+      return z;
+    });
+  }
+
+  return zones;
+}
+
+function getInsertHighlightStyle(direction: InsertDirection): React.CSSProperties {
+  switch (direction) {
+    case "left":   return { position: "absolute", left: 0,     top: 0,    width: "50%",  height: "100%" };
+    case "right":  return { position: "absolute", left: "50%", top: 0,    width: "50%",  height: "100%" };
+    case "top":    return { position: "absolute", left: 0,     top: 0,    width: "100%", height: "50%"  };
+    case "bottom": return { position: "absolute", left: 0,     top: "50%",width: "100%", height: "50%"  };
+  }
 }
 
 // ── Carousel Preview ───────────────────────────────────────────────
@@ -222,7 +355,6 @@ function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; t
         transform: isCurrent ? "scale(1)" : "scale(1.15)",
       };
     }
-    // none
     return { ...base, opacity: isCurrent ? 1 : 0, transition: "none" };
   };
 
@@ -314,34 +446,22 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
 
   const confirmPickerSelection = () => {
     const appendedItems: MediaItem[] = [];
-
     Array.from(selectedPickerIds).forEach((pickerId) => {
       const item = pickerItems.find((p) => p.id === pickerId);
       if (!item) return;
-
       if (item.kind === "media") {
         const m = item.raw;
         const dur = m.type === "video" && m.duration ? parseFloat(m.duration) || 10 : 5;
         appendedItems.push({ id: m.id, type: m.type as "image" | "video", url: m.thumbnail || m.url, name: m.name, duration: dur });
         return;
       }
-
       const w = item.raw;
       appendedItems.push({ id: w.id, type: "widget", url: "", name: w.name, duration: 5, widgetConfig: w.config });
     });
-
     const updatedItems = [...mediaItems, ...appendedItems];
     const updatedContent = updatedItems.length > 0
-      ? {
-          ...content,
-          type: "media" as const,
-          mediaItems: updatedItems,
-          widgetId: undefined,
-          widgetName: undefined,
-          widgetConfig: undefined,
-        }
+      ? { ...content, type: "media" as const, mediaItems: updatedItems, widgetId: undefined, widgetName: undefined, widgetConfig: undefined }
       : content;
-
     onUpdate(updatedContent);
     setSelectedPickerIds(new Set());
     setShowContentPicker(false);
@@ -361,209 +481,205 @@ function ZoneEditor({ zone, onUpdate, onClose, dbMedia, dbWidgets, isEmbedded }:
   };
 
   const innerContent = (
-      <div className="space-y-3">
-        {/* Unified content section: Media & Widgets */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" /> {t("studioContentPicker")}</label>
-            <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => { setShowContentPicker(!showContentPicker); setSelectedPickerIds(new Set()); setPickerSearch(""); setPickerFilter("all"); }}>
-              <Plus className="w-3 h-3" /> {t("studioAddContent")}
-            </Button>
-          </div>
-
-          {/* Currently added content items */}
-          {mediaItems.length > 0 && (
-            <div className="space-y-0.5 mb-2">
-              {mediaItems.map((m, i) => (
-                <div
-                  key={`${m.id}-${i}`}
-                  draggable
-                  onDragStart={() => setDragIdx(i)}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
-                  onDragEnd={() => {
-                    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
-                      const reordered = [...mediaItems];
-                      const [moved] = reordered.splice(dragIdx, 1);
-                      reordered.splice(dragOverIdx, 0, moved);
-                      onUpdate({ ...content, type: "media", mediaItems: reordered });
-                    }
-                    setDragIdx(null);
-                    setDragOverIdx(null);
-                  }}
-                  className={`flex items-center gap-1.5 p-1.5 rounded-md text-xs transition-all ${
-                    dragOverIdx === i && dragIdx !== null && dragIdx !== i
-                      ? "bg-primary/15 ring-1 ring-primary/40"
-                      : "bg-muted/50"
-                  } ${dragIdx === i ? "opacity-40" : ""}`}
-                >
-                  <GripVertical className="w-3 h-3 text-muted-foreground/50 shrink-0 cursor-grab active:cursor-grabbing" />
-                  {m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : m.type === "video" ? <Film className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />}
-                  <span className="truncate flex-1 text-foreground">{m.name}</span>
-                  <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{m.type === "image" ? "IMG" : m.type === "video" ? "VID" : "Widget"}</Badge>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {m.type === "video" ? (
-                      <span className="text-[10px] text-muted-foreground">{m.duration || 10}s</span>
-                    ) : (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
-                          const updated = [...mediaItems];
-                          updated[i] = { ...m, duration: Math.max(1, (m.duration || 5) - 1) };
-                          onUpdate({ ...content, type: "media", mediaItems: updated });
-                        }}><Minus className="w-2.5 h-2.5" /></Button>
-                        <span className="text-[10px] font-medium text-foreground w-5 text-center">{m.duration || 5}s</span>
-                        <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
-                          const updated = [...mediaItems];
-                          updated[i] = { ...m, duration: Math.min(60, (m.duration || 5) + 1) };
-                          onUpdate({ ...content, type: "media", mediaItems: updated });
-                        }}><Plus className="w-2.5 h-2.5" /></Button>
-                      </>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => removeMedia(m.id, i)}><X className="w-3 h-3" /></Button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Legacy single widget */}
-          {content.type === "widget" && content.widgetName && mediaItems.length === 0 && (
-            <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs mb-2">
-              <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
-              <span className="truncate flex-1 text-foreground">{content.widgetName}</span>
-              <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => onUpdate({ ...content, type: "color", widgetId: undefined, widgetName: undefined, widgetConfig: undefined })}><X className="w-3 h-3" /></Button>
-            </div>
-          )}
-
-          {/* Carousel transition options */}
-          {mediaItems.length > 1 && (
-            <div className="space-y-2 mt-1">
-              <div>
-                <label className="text-[11px] text-muted-foreground mb-1 block">{t("studioTransition")}</label>
-                <div className="flex gap-1">
-                  {([
-                    { val: "fade" as CarouselTransition, label: t("studioTransFade") },
-                    { val: "slide" as CarouselTransition, label: t("studioTransSlide") },
-                    { val: "zoom" as CarouselTransition, label: t("studioTransZoom") },
-                    { val: "none" as CarouselTransition, label: t("studioTransNone") },
-                  ]).map(({ val, label }) => (
-                    <Button key={val} variant={(content.carouselTransition || "fade") === val ? "default" : "outline"} size="sm" className="h-6 text-[10px] flex-1 px-1"
-                      onClick={() => onUpdate({ ...content, carouselTransition: val })}>{label}</Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Unified multi-select picker */}
-          {showContentPicker && (
-            <div className="mt-2 border border-border rounded-md p-2 bg-card space-y-1.5">
-              {/* Search bar */}
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
-                <Input
-                  className="h-7 text-[11px] pl-7 pr-2"
-                  placeholder={t("pickerSearchPlaceholder")}
-                  value={pickerSearch}
-                  onChange={(e) => setPickerSearch(e.target.value)}
-                />
-              </div>
-              {/* Filter & Sort row */}
-              <div className="flex items-center gap-1">
-                <div className="flex gap-0.5 flex-1">
-                  {(["all", "image", "video", "widget"] as const).map((f) => (
-                    <Button key={f} variant={pickerFilter === f ? "default" : "ghost"} size="sm"
-                      className="h-5 text-[9px] px-1.5 flex-1"
-                      onClick={() => setPickerFilter(f)}>
-                      {t(`pickerFilter_${f}`)}
-                    </Button>
-                  ))}
-                </div>
-                <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title={t("pickerSort")}
-                  onClick={() => {
-                    const order: Array<typeof pickerSort> = ["name-asc", "name-desc", "newest", "oldest"];
-                    setPickerSort(order[(order.indexOf(pickerSort) + 1) % order.length]);
-                  }}>
-                  {pickerSort === "name-asc" ? <ArrowDownAZ className="w-3 h-3" /> :
-                   pickerSort === "name-desc" ? <ArrowUpAZ className="w-3 h-3" /> :
-                   <ArrowUpDown className="w-3 h-3" />}
-                </Button>
-              </div>
-              {/* Sort indicator */}
-              <p className="text-[9px] text-muted-foreground">{t(`pickerSort_${pickerSort}`)}</p>
-              {/* Items list */}
-              <div className="max-h-32 overflow-y-auto space-y-0.5">
-                {filteredPickerItems.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
-                ) : (
-                  filteredPickerItems.map((item) => {
-                    const isSelected = selectedPickerIds.has(item.id);
-                    return (
-                      <button key={item.id} className={`w-full flex items-center gap-2 p-1.5 rounded text-left text-xs transition-colors ${isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"}`}
-                        onClick={() => togglePickerItem(item.id)}>
-                        <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
-                          {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
-                        </div>
-                        {item.icon}
-                        <span className="truncate text-foreground flex-1">{item.name}</span>
-                        <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{item.kind === "media" ? (item.type === "image" ? "IMG" : "VID") : "Widget"}</Badge>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              <div className="flex items-center justify-between pt-1.5 border-t border-border">
-                <span className="text-[10px] text-muted-foreground">
-                  {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
-                </span>
-                <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
-                  <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
-                </Button>
-              </div>
-            </div>
-          )}
+    <div className="space-y-3">
+      {/* Unified content section: Media & Widgets */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" /> {t("studioContentPicker")}</label>
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => { setShowContentPicker(!showContentPicker); setSelectedPickerIds(new Set()); setPickerSearch(""); setPickerFilter("all"); }}>
+            <Plus className="w-3 h-3" /> {t("studioAddContent")}
+          </Button>
         </div>
 
-        {/* Text input */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{t("studioText")}</label>
-          <Input placeholder={t("studioTextPlaceholder")} value={content.type === "text" ? content.value : ""} className="h-8 text-xs"
-            onChange={(e) => onUpdate({ ...content, type: "text", value: e.target.value })} />
-        </div>
-        {/* Font size */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-muted-foreground">{t("studioFontSize")}</label>
-            <span className="text-xs font-medium text-foreground">{content.fontSize || 24}px</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => onUpdate({ ...content, fontSize: Math.max(12, (content.fontSize || 24) - 2) })}><Minus className="w-3 h-3" /></Button>
-            <Slider value={[content.fontSize || 24]} min={12} max={72} step={2} onValueChange={([v]) => onUpdate({ ...content, fontSize: v })} className="flex-1" />
-            <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => onUpdate({ ...content, fontSize: Math.min(72, (content.fontSize || 24) + 2) })}><Plus className="w-3 h-3" /></Button>
-          </div>
-        </div>
-        {/* Text align */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-1.5 block">{t("studioTextAlign")}</label>
-          <div className="flex gap-1">
-            {([{ val: "left" as const, icon: <AlignLeft className="w-3.5 h-3.5" /> }, { val: "center" as const, icon: <AlignCenter className="w-3.5 h-3.5" /> }, { val: "right" as const, icon: <AlignRight className="w-3.5 h-3.5" /> }]).map(({ val, icon }) => (
-              <Button key={val} variant={(content.textAlign || "center") === val ? "default" : "outline"} size="sm" className="h-7 w-9 px-0" onClick={() => onUpdate({ ...content, textAlign: val })}>{icon}</Button>
+        {/* Currently added content items */}
+        {mediaItems.length > 0 && (
+          <div className="space-y-0.5 mb-2">
+            {mediaItems.map((m, i) => (
+              <div
+                key={`${m.id}-${i}`}
+                draggable
+                onDragStart={() => setDragIdx(i)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+                onDragEnd={() => {
+                  if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+                    const reordered = [...mediaItems];
+                    const [moved] = reordered.splice(dragIdx, 1);
+                    reordered.splice(dragOverIdx, 0, moved);
+                    onUpdate({ ...content, type: "media", mediaItems: reordered });
+                  }
+                  setDragIdx(null);
+                  setDragOverIdx(null);
+                }}
+                className={`flex items-center gap-1.5 p-1.5 rounded-md text-xs transition-all ${
+                  dragOverIdx === i && dragIdx !== null && dragIdx !== i
+                    ? "bg-primary/15 ring-1 ring-primary/40"
+                    : "bg-muted/50"
+                } ${dragIdx === i ? "opacity-40" : ""}`}
+              >
+                <GripVertical className="w-3 h-3 text-muted-foreground/50 shrink-0 cursor-grab active:cursor-grabbing" />
+                {m.type === "image" ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : m.type === "video" ? <Film className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />}
+                <span className="truncate flex-1 text-foreground">{m.name}</span>
+                <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{m.type === "image" ? "IMG" : m.type === "video" ? "VID" : "Widget"}</Badge>
+                <div className="flex items-center gap-1 shrink-0">
+                  {m.type === "video" ? (
+                    <span className="text-[10px] text-muted-foreground">{m.duration || 10}s</span>
+                  ) : (
+                    <>
+                      <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                        const updated = [...mediaItems];
+                        updated[i] = { ...m, duration: Math.max(1, (m.duration || 5) - 1) };
+                        onUpdate({ ...content, type: "media", mediaItems: updated });
+                      }}><Minus className="w-2.5 h-2.5" /></Button>
+                      <span className="text-[10px] font-medium text-foreground w-5 text-center">{m.duration || 5}s</span>
+                      <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => {
+                        const updated = [...mediaItems];
+                        updated[i] = { ...m, duration: Math.min(60, (m.duration || 5) + 1) };
+                        onUpdate({ ...content, type: "media", mediaItems: updated });
+                      }}><Plus className="w-2.5 h-2.5" /></Button>
+                    </>
+                  )}
+                </div>
+                <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => removeMedia(m.id, i)}><X className="w-3 h-3" /></Button>
+              </div>
             ))}
           </div>
-        </div>
-        {/* BG color */}
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{t("studioBgColor")}</label>
-          <div className="flex gap-1.5 flex-wrap">
-            <button className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform relative overflow-hidden" onClick={() => onUpdate({ ...content, bgColor: "transparent" })}
-              style={{ background: "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)", backgroundSize: "8px 8px", backgroundPosition: "0 0, 4px 4px" }}>
-              {(content.bgColor === "transparent" || !content.bgColor) && <div className="absolute inset-0 ring-2 ring-primary rounded-md" />}
-            </button>
-            {["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(220 14% 20%)", "hsl(0 0% 100%)", "hsl(280 60% 50%)", "hsl(190 70% 45%)"].map((c) => (
-              <button key={c} className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform" style={{ background: c }} onClick={() => onUpdate({ ...content, bgColor: c })} />
-            ))}
+        )}
+
+        {/* Legacy single widget */}
+        {content.type === "widget" && content.widgetName && mediaItems.length === 0 && (
+          <div className="flex items-center gap-2 p-1.5 rounded-md bg-muted/50 text-xs mb-2">
+            <Code2 className="w-3.5 h-3.5 text-accent-foreground shrink-0" />
+            <span className="truncate flex-1 text-foreground">{content.widgetName}</span>
+            <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => onUpdate({ ...content, type: "color", widgetId: undefined, widgetName: undefined, widgetConfig: undefined })}><X className="w-3 h-3" /></Button>
           </div>
+        )}
+
+        {/* Carousel transition options */}
+        {mediaItems.length > 1 && (
+          <div className="space-y-2 mt-1">
+            <div>
+              <label className="text-[11px] text-muted-foreground mb-1 block">{t("studioTransition")}</label>
+              <div className="flex gap-1">
+                {([
+                  { val: "fade" as CarouselTransition, label: t("studioTransFade") },
+                  { val: "slide" as CarouselTransition, label: t("studioTransSlide") },
+                  { val: "zoom" as CarouselTransition, label: t("studioTransZoom") },
+                  { val: "none" as CarouselTransition, label: t("studioTransNone") },
+                ]).map(({ val, label }) => (
+                  <Button key={val} variant={(content.carouselTransition || "fade") === val ? "default" : "outline"} size="sm" className="h-6 text-[10px] flex-1 px-1"
+                    onClick={() => onUpdate({ ...content, carouselTransition: val })}>{label}</Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unified multi-select picker */}
+        {showContentPicker && (
+          <div className="mt-2 border border-border rounded-md p-2 bg-card space-y-1.5">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                className="h-7 text-[11px] pl-7 pr-2"
+                placeholder={t("pickerSearchPlaceholder")}
+                value={pickerSearch}
+                onChange={(e) => setPickerSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="flex gap-0.5 flex-1">
+                {(["all", "image", "video", "widget"] as const).map((f) => (
+                  <Button key={f} variant={pickerFilter === f ? "default" : "ghost"} size="sm"
+                    className="h-5 text-[9px] px-1.5 flex-1"
+                    onClick={() => setPickerFilter(f)}>
+                    {t(`pickerFilter_${f}`)}
+                  </Button>
+                ))}
+              </div>
+              <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title={t("pickerSort")}
+                onClick={() => {
+                  const order: Array<typeof pickerSort> = ["name-asc", "name-desc", "newest", "oldest"];
+                  setPickerSort(order[(order.indexOf(pickerSort) + 1) % order.length]);
+                }}>
+                {pickerSort === "name-asc" ? <ArrowDownAZ className="w-3 h-3" /> :
+                 pickerSort === "name-desc" ? <ArrowUpAZ className="w-3 h-3" /> :
+                 <ArrowUpDown className="w-3 h-3" />}
+              </Button>
+            </div>
+            <p className="text-[9px] text-muted-foreground">{t(`pickerSort_${pickerSort}`)}</p>
+            <div className="max-h-32 overflow-y-auto space-y-0.5">
+              {filteredPickerItems.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground text-center py-2">{t("mediaNoResult")}</p>
+              ) : (
+                filteredPickerItems.map((item) => {
+                  const isSelected = selectedPickerIds.has(item.id);
+                  return (
+                    <button key={item.id} className={`w-full flex items-center gap-2 p-1.5 rounded text-left text-xs transition-colors ${isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-muted"}`}
+                      onClick={() => togglePickerItem(item.id)}>
+                      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"}`}>
+                        {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                      </div>
+                      {item.icon}
+                      <span className="truncate text-foreground flex-1">{item.name}</span>
+                      <Badge variant="outline" className="text-[9px] h-4 px-1 shrink-0">{item.kind === "media" ? (item.type === "image" ? "IMG" : "VID") : "Widget"}</Badge>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            <div className="flex items-center justify-between pt-1.5 border-t border-border">
+              <span className="text-[10px] text-muted-foreground">
+                {t("studioSelectedCount").replace("{count}", String(selectedPickerIds.size))}
+              </span>
+              <Button size="sm" className="h-6 text-[10px] gap-1" disabled={selectedPickerIds.size === 0} onClick={confirmPickerSelection}>
+                <Check className="w-3 h-3" /> {t("studioConfirmAdd")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Text input */}
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">{t("studioText")}</label>
+        <Input placeholder={t("studioTextPlaceholder")} value={content.type === "text" ? content.value : ""} className="h-8 text-xs"
+          onChange={(e) => onUpdate({ ...content, type: "text", value: e.target.value })} />
+      </div>
+      {/* Font size */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs text-muted-foreground">{t("studioFontSize")}</label>
+          <span className="text-xs font-medium text-foreground">{content.fontSize || 24}px</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => onUpdate({ ...content, fontSize: Math.max(12, (content.fontSize || 24) - 2) })}><Minus className="w-3 h-3" /></Button>
+          <Slider value={[content.fontSize || 24]} min={12} max={72} step={2} onValueChange={([v]) => onUpdate({ ...content, fontSize: v })} className="flex-1" />
+          <Button variant="outline" size="icon" className="h-6 w-6 shrink-0" onClick={() => onUpdate({ ...content, fontSize: Math.min(72, (content.fontSize || 24) + 2) })}><Plus className="w-3 h-3" /></Button>
         </div>
       </div>
+      {/* Text align */}
+      <div>
+        <label className="text-xs text-muted-foreground mb-1.5 block">{t("studioTextAlign")}</label>
+        <div className="flex gap-1">
+          {([{ val: "left" as const, icon: <AlignLeft className="w-3.5 h-3.5" /> }, { val: "center" as const, icon: <AlignCenter className="w-3.5 h-3.5" /> }, { val: "right" as const, icon: <AlignRight className="w-3.5 h-3.5" /> }]).map(({ val, icon }) => (
+            <Button key={val} variant={(content.textAlign || "center") === val ? "default" : "outline"} size="sm" className="h-7 w-9 px-0" onClick={() => onUpdate({ ...content, textAlign: val })}>{icon}</Button>
+          ))}
+        </div>
+      </div>
+      {/* BG color */}
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">{t("studioBgColor")}</label>
+        <div className="flex gap-1.5 flex-wrap">
+          <button className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform relative overflow-hidden" onClick={() => onUpdate({ ...content, bgColor: "transparent" })}
+            style={{ background: "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)", backgroundSize: "8px 8px", backgroundPosition: "0 0, 4px 4px" }}>
+            {(content.bgColor === "transparent" || !content.bgColor) && <div className="absolute inset-0 ring-2 ring-primary rounded-md" />}
+          </button>
+          {["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(var(--warning))", "hsl(var(--success))", "hsl(220 14% 20%)", "hsl(0 0% 100%)", "hsl(280 60% 50%)", "hsl(190 70% 45%)"].map((c) => (
+            <button key={c} className="w-6 h-6 rounded-md border border-border hover:scale-110 transition-transform" style={{ background: c }} onClick={() => onUpdate({ ...content, bgColor: c })} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   if (isEmbedded) return innerContent;
@@ -744,8 +860,14 @@ export default function ContentStudioPage() {
   const [overlays, setOverlays] = useState<OverlayBlock[]>([]);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [selectedOverlay, setSelectedOverlay] = useState<string | null>(null);
-  const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<string>("layouts");
+
+  // ── Drag state ──────────────────────────────────────────────────
+  const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
+  const [dropIntent, setDropIntent] = useState<DropIntent>({ mode: "none" });
+  // Refs hold the authoritative live values for event handler closures
+  const dropIntentRef = useRef<DropIntent>({ mode: "none" });
+  const dragOriginZoneRef = useRef<Zone | null>(null);
 
   // Project state
   const [currentProject, setCurrentProject] = useState<DesignProject | null>(null);
@@ -786,7 +908,7 @@ export default function ContentStudioPage() {
   // Overlay management
   const addOverlay = useCallback(() => {
     const id = `overlay-${Date.now()}`;
-    const label = String.fromCharCode(65 + overlays.length); // A, B, C...
+    const label = String.fromCharCode(65 + overlays.length);
     setOverlays((prev) => [...prev, { id, x: 50, y: 50, w: 200, h: 120, label: `OV-${label}`, opacity: 100, zIndex: prev.length + 1, content: { type: "text", value: "", bgColor: "transparent", fontSize: 20, textColor: "hsl(0 0% 100%)" } }]);
   }, [overlays.length]);
 
@@ -850,23 +972,18 @@ export default function ContentStudioPage() {
 
   // Delete project
   const handleDelete = useCallback(async (id: string) => {
-    // Check if bound in schedule items
     const { data: scheduleUsage } = await (supabase as any)
       .from("schedule_items")
       .select("id, schedule_id, schedules(name)")
       .eq("design_project_id", id)
       .limit(10);
-
-    // Check if bound in media items
     const { data: mediaUsage } = await (supabase as any)
       .from("media_items")
       .select("id, name")
       .eq("design_project_id", id)
       .limit(10);
-
     const hasScheduleUsage = scheduleUsage && scheduleUsage.length > 0;
     const hasMediaUsage = mediaUsage && mediaUsage.length > 0;
-
     if (hasScheduleUsage || hasMediaUsage) {
       const parts: string[] = [];
       if (hasScheduleUsage) {
@@ -880,7 +997,6 @@ export default function ContentStudioPage() {
       toast.error(t("studioDeleteBoundError"), { description: parts.join("\n") });
       return;
     }
-
     await (supabase as any).from("design_projects").delete().eq("id", id);
     if (currentProject?.id === id) { setCurrentProject(null); }
     loadProjects();
@@ -897,7 +1013,7 @@ export default function ContentStudioPage() {
     setSelectedOverlay(null);
   }, []);
 
-  // Resize logic
+  // ── Resize logic ───────────────────────────────────────────────
   const canvasRef = useRef<HTMLDivElement>(null);
   const [resizing, setResizing] = useState<{ zoneId: string; edge: "right" | "bottom"; startPos: number; startVal: number } | null>(null);
 
@@ -938,7 +1054,7 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [zones, getAdjacentZones]);
 
-  // Overlay drag logic
+  // ── Overlay drag logic ─────────────────────────────────────────
   const handleOverlayDragStart = useCallback((e: React.MouseEvent, overlayId: string) => {
     e.stopPropagation(); e.preventDefault();
     const overlay = overlays.find((o) => o.id === overlayId);
@@ -947,7 +1063,6 @@ export default function ContentStudioPage() {
     const origX = overlay.x, origY = overlay.y;
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
-
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
@@ -959,7 +1074,7 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [overlays]);
 
-  // Overlay resize logic
+  // ── Overlay resize logic ───────────────────────────────────────
   const handleOverlayResizeStart = useCallback((e: React.MouseEvent, overlayId: string, corner: string) => {
     e.stopPropagation(); e.preventDefault();
     const overlay = overlays.find((o) => o.id === overlayId);
@@ -968,7 +1083,6 @@ export default function ContentStudioPage() {
     const origW = overlay.w, origH = overlay.h;
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
-
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX;
       const dy = ev.clientY - startY;
@@ -980,43 +1094,93 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [overlays]);
 
-  // Zone drag logic
+  // ── Zone drag logic (DropIntent architecture) ──────────────────
+  //
+  // mousedown → record origin, init state
+  // mousemove → update preview position + resolve DropIntent (NO structural changes)
+  // mouseup   → apply DropIntent (free / swap / insert)
+  //
   const handleZoneDragStart = useCallback((e: React.MouseEvent, zoneId: string) => {
     e.stopPropagation();
     e.preventDefault();
+
     const zone = zones.find((z) => z.id === zoneId);
     if (!zone) return;
+
+    // Snapshot origin before any movement
+    dragOriginZoneRef.current = { ...zone };
+    dropIntentRef.current = { mode: "none" };
+
     const startX = e.clientX;
     const startY = e.clientY;
     const origX = zone.x;
     const origY = zone.y;
+    const zoneW = zone.w; // width doesn't change during free drag
+    const zoneH = zone.h;
+
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
+
     setDraggingZoneId(zoneId);
+    setDropIntent({ mode: "none" });
+
+    // mousemove: update preview + resolve intent, never commit structural changes
     const onMove = (ev: MouseEvent) => {
       const dxPercent = ((ev.clientX - startX) / canvasRect.width) * 100;
       const dyPercent = ((ev.clientY - startY) / canvasRect.height) * 100;
-      setZones((prev) => {
-        const z = prev.find((z) => z.id === zoneId);
-        if (!z) return prev;
-        const newX = snapToGrid(Math.max(0, Math.min(100 - z.w, origX + dxPercent)));
-        const newY = snapToGrid(Math.max(0, Math.min(100 - z.h, origY + dyPercent)));
-        const nextZone = { x: newX, y: newY, w: z.w, h: z.h };
-        if (wouldOverlapAnyZone(nextZone, prev, zoneId)) return prev;
-        return prev.map((zo) => zo.id === zoneId ? { ...zo, x: newX, y: newY } : zo);
-      });
+
+      // Preview position (clamped + snapped)
+      const newX = snapToGrid(Math.max(0, Math.min(100 - zoneW, origX + dxPercent)));
+      const newY = snapToGrid(Math.max(0, Math.min(100 - zoneH, origY + dyPercent)));
+
+      // Update only the dragged zone's preview position
+      setZones((prev) =>
+        prev.map((z) => (z.id === zoneId ? { ...z, x: newX, y: newY } : z))
+      );
+
+      // Pointer in canvas-percentage coordinates
+      const pointerXPercent = ((ev.clientX - canvasRect.left) / canvasRect.width) * 100;
+      const pointerYPercent = ((ev.clientY - canvasRect.top) / canvasRect.height) * 100;
+
+      // Resolve intent using initial zones snapshot (other zones don't move during drag)
+      const intent = resolveDropIntent(
+        pointerXPercent,
+        pointerYPercent,
+        newX,
+        newY,
+        zones,      // closure: initial zones — correct because only dragged zone moves
+        zoneId
+      );
+
+      dropIntentRef.current = intent;
+      setDropIntent(intent);
     };
+
+    // mouseup: commit the intent
     const onUp = () => {
+      const origin = dragOriginZoneRef.current;
+      const intent = dropIntentRef.current;
+
+      if (origin) {
+        setZones((prev) => applyDropIntent(prev, zoneId, origin, intent));
+      }
+
       setDraggingZoneId(null);
+      setDropIntent({ mode: "none" });
+      dropIntentRef.current = { mode: "none" };
+      dragOriginZoneRef.current = null;
+
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   }, [zones]);
 
   const activeZone = zones.find((z) => z.id === selectedZone);
   const activeOverlay = overlays.find((o) => o.id === selectedOverlay);
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header */}
@@ -1031,14 +1195,12 @@ export default function ContentStudioPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Project actions */}
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={handleNew}><FilePlus className="w-3.5 h-3.5" /> {t("studioNew")}</Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={() => setShowLoadDialog(true)}><FolderOpen className="w-3.5 h-3.5" /> {t("studioOpen")}</Button>
           <Button variant="default" size="sm" className="gap-1.5 text-xs h-8" onClick={() => { if (currentProject) handleSave(); else { setProjectName(""); setShowSaveDialog(true); } }} disabled={saving}>
             <Save className="w-3.5 h-3.5" /> {t("save")}
           </Button>
           <div className="w-px h-6 bg-border mx-1" />
-          {/* Aspect toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
             <Button variant={aspect === "16:9" ? "default" : "ghost"} size="sm" className="gap-1.5 text-xs h-7" onClick={() => setAspect("16:9")}>
               <Monitor className="w-3.5 h-3.5" /> 16:9
@@ -1120,15 +1282,28 @@ export default function ContentStudioPage() {
 
         {/* Canvas area */}
         <div className="flex-1 flex items-center justify-center bg-muted/30 rounded-xl border border-border relative overflow-hidden min-h-0">
-          <div ref={canvasRef} className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`} style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}
-            onClick={() => { if (selectedOverlay) setSelectedOverlay(null); }}>
+          <div
+            ref={canvasRef}
+            className={`relative bg-card rounded-lg shadow-lg border border-border overflow-hidden ${resizing ? "" : "transition-all duration-300"}`}
+            style={{ width: W, height: H, maxWidth: "100%", maxHeight: "100%" }}
+            onClick={() => { if (selectedOverlay) setSelectedOverlay(null); }}
+          >
             {zones.map((zone) => {
               const isSelected = selectedZone === zone.id;
+              const isDragging = draggingZoneId === zone.id;
+              const isSwapTarget = dropIntent.mode === "swap" && zone.id === dropIntent.targetId;
+              const isInsertTarget = dropIntent.mode === "insert" && zone.id === dropIntent.targetId;
               const bg = zone.content?.bgColor || "hsl(var(--muted))";
               const mediaItems = zone.content?.mediaItems || [];
+
               return (
-                <div key={zone.id}
-                  className={`absolute cursor-pointer transition-all duration-200 flex items-center justify-center overflow-hidden group ${draggingZoneId === zone.id ? "opacity-60" : ""} ${isSelected ? "ring-2 ring-primary ring-offset-1 z-10" : "hover:ring-1 hover:ring-primary/40"}`}
+                <div
+                  key={zone.id}
+                  className={`absolute cursor-pointer flex items-center justify-center overflow-hidden group
+                    ${isDragging ? "opacity-60 z-10" : ""}
+                    ${isSelected ? "ring-2 ring-primary ring-offset-1 z-10" : "hover:ring-1 hover:ring-primary/40"}
+                    ${!isDragging ? "transition-all duration-200" : ""}
+                  `}
                   style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%`, background: bg }}
                   onClick={() => { setSelectedOverlay(null); setSelectedZone(isSelected ? null : zone.id); }}
                 >
@@ -1150,6 +1325,7 @@ export default function ContentStudioPage() {
                     </div>
                   )}
 
+                  {/* Drag handle + label */}
                   <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                     <div
                       className="opacity-0 group-hover:opacity-100 transition-opacity cursor-move p-0.5 rounded bg-foreground/60 text-background hover:bg-foreground/80"
@@ -1160,6 +1336,18 @@ export default function ContentStudioPage() {
                     <span className="bg-foreground/80 text-background text-[10px] font-bold px-1.5 py-0.5 rounded">{zone.label}</span>
                   </div>
 
+                  {/* DropIntent visual highlights */}
+                  {isSwapTarget && (
+                    <div className="absolute inset-0 bg-primary/25 border-2 border-primary pointer-events-none z-20" />
+                  )}
+                  {isInsertTarget && dropIntent.mode === "insert" && (
+                    <div
+                      className="bg-primary/30 border-2 border-primary pointer-events-none z-20"
+                      style={getInsertHighlightStyle(dropIntent.direction)}
+                    />
+                  )}
+
+                  {/* Resize handles */}
                   {hasResizeHandle(zone, "right", zones) && (
                     <div className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-20 group/handle hover:bg-primary/30 transition-colors" onMouseDown={(e) => handleResizeStart(e, zone.id, "right")}>
                       <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-8 rounded-full bg-primary/60 opacity-0 group-hover/handle:opacity-100 transition-opacity" />
@@ -1186,7 +1374,6 @@ export default function ContentStudioPage() {
                   onClick={(e) => { e.stopPropagation(); setSelectedZone(null); setSelectedOverlay(isSelected ? null : overlay.id); }}
                   onMouseDown={(e) => { if (overlay.locked) return; if ((e.target as HTMLElement).dataset.resize) return; handleOverlayDragStart(e, overlay.id); }}
                 >
-                  {/* Content render */}
                   {overlay.content?.type === "media" && mediaItems.length > 0 ? (
                     <CarouselPreview items={mediaItems} transition={overlay.content.carouselTransition || "fade"} />
                   ) : overlay.content?.type === "widget" && overlay.content.widgetConfig ? (
@@ -1204,19 +1391,16 @@ export default function ContentStudioPage() {
                     </div>
                   )}
 
-                  {/* Label badge */}
                   <span className="absolute top-1 left-1 bg-accent-foreground/80 text-background text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                     {overlay.locked ? <Lock className="w-2.5 h-2.5" /> : <Layers className="w-2.5 h-2.5" />} {overlay.label}
                   </span>
 
-                  {/* Delete button */}
                   {isSelected && (
                     <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-5 w-5 z-50" onClick={(e) => { e.stopPropagation(); deleteOverlay(overlay.id); }}>
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   )}
 
-                  {/* Resize handle bottom-right */}
                   {!overlay.locked && (
                     <div data-resize="true" className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-50 flex items-end justify-end"
                       onMouseDown={(e) => handleOverlayResizeStart(e, overlay.id, "se")}>
@@ -1236,7 +1420,6 @@ export default function ContentStudioPage() {
                   <span className="text-sm font-semibold text-foreground">{t("studioEditOverlay")} {activeOverlay.label}</span>
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedOverlay(null)}><X className="w-3.5 h-3.5" /></Button>
                 </div>
-                {/* Lock toggle */}
                 <div className="mb-3">
                   <Button variant={activeOverlay.locked ? "default" : "outline"} size="sm" className="w-full h-7 text-xs gap-1.5"
                     onClick={() => setOverlays((prev) => prev.map((o) => o.id === activeOverlay.id ? { ...o, locked: !o.locked } : o))}>
@@ -1244,7 +1427,6 @@ export default function ContentStudioPage() {
                     {activeOverlay.locked ? t("studioLocked") : t("studioUnlocked")}
                   </Button>
                 </div>
-                {/* Opacity slider */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs text-muted-foreground">{t("studioOpacity")}</label>
@@ -1252,7 +1434,6 @@ export default function ContentStudioPage() {
                   </div>
                   <Slider value={[activeOverlay.opacity ?? 100]} min={10} max={100} step={5} onValueChange={([v]) => setOverlays((prev) => prev.map((o) => o.id === activeOverlay.id ? { ...o, opacity: v } : o))} />
                 </div>
-                {/* Layer order */}
                 {overlays.length > 1 && (
                   <div className="mb-3">
                     <div className="flex items-center justify-between">
@@ -1268,7 +1449,6 @@ export default function ContentStudioPage() {
                     </div>
                   </div>
                 )}
-                {/* Reuse ZoneEditor content inline - delegate to ZoneEditor */}
                 <ZoneEditor zone={{ id: activeOverlay.id, x: 0, y: 0, w: 100, h: 100, label: activeOverlay.label, content: activeOverlay.content }} onUpdate={(content) => updateOverlayContent(activeOverlay.id, content)} onClose={() => setSelectedOverlay(null)} dbMedia={dbMedia} dbWidgets={dbWidgets} isEmbedded />
               </Card>
             )}
