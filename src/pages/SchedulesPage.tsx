@@ -2098,6 +2098,7 @@ interface EventConfig {
   sourceType: EventSourceType;
 
   gpioPin: string;
+  gpioPins: string[];
 
   apiUrl: string;
   apiRegex: string;
@@ -2266,7 +2267,8 @@ const createDefaultEventConfig = (): EventConfig => ({
   repeatCount: "",
   sourceType: "touch",
 
-  gpioPin: "3",
+  gpioPin: "1",
+  gpioPins: ["1"],
 
   apiUrl: "",
   apiRegex: "",
@@ -2487,9 +2489,11 @@ export default function SchedulesPage() {
         return;
       }
 
-      if (ec.sourceType === "gpio" && !ec.gpioPin.trim()) {
-        toast.error("請輸入 GPIO Pin 編號");
-        return;
+      if (ec.sourceType === "gpio") {
+        if (ec.gpioPins.length === 0 || ec.gpioPins.every((p) => !p.trim())) {
+          toast.error("請至少填寫一個 GPIO Pin 編號");
+          return;
+        }
       }
 
       if (ec.sourceType === "api" && !ec.apiUrl.trim()) {
@@ -3117,60 +3121,98 @@ export default function SchedulesPage() {
                 </div>
 
                 {form.eventConfig.sourceType === "gpio" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">觸發模式</Label>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                          <input
-                            type="radio"
-                            name="event-trigger-type"
-                            checked={form.eventConfig.triggerType === "once"}
-                            onChange={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                eventConfig: { ...prev.eventConfig, triggerType: "once" },
-                              }))
-                            }
-                          />
-                          <span>點動模式</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                          <input
-                            type="radio"
-                            name="event-trigger-type"
-                            checked={form.eventConfig.triggerType === "hold"}
-                            onChange={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                eventConfig: { ...prev.eventConfig, triggerType: "hold" },
-                              }))
-                            }
-                          />
-                          <span>開關模式</span>
-                        </label>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">GPIO 設定</Label>
+                      <button
+                        type="button"
+                        disabled={form.eventConfig.gpioPins.length >= 32}
+                        className="text-xs px-2 py-1 rounded border border-input bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            eventConfig: {
+                              ...prev.eventConfig,
+                              gpioPins: [...prev.eventConfig.gpioPins, ""],
+                            },
+                          }))
+                        }
+                      >
+                        新增
+                      </button>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-semibold">GPIO 設定</Label>
-                      <div className="max-w-xs grid grid-cols-[90px_1fr]">
-                        <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm">
-                          Pin 編號
+                      {form.eventConfig.gpioPins.map((pin, index) => (
+                        <div key={index} className="flex items-center gap-3 flex-wrap">
+                          <div className="grid grid-cols-[80px_1fr] w-[200px]">
+                            <div className="h-10 border border-r-0 border-input bg-muted px-3 flex items-center text-sm shrink-0">
+                              Pin {index + 1}
+                            </div>
+                            <Input
+                              value={pin}
+                              onChange={(e) => {
+                                const updated = form.eventConfig.gpioPins.map((p, i) =>
+                                  i === index ? e.target.value : p
+                                );
+                                setForm((prev) => ({
+                                  ...prev,
+                                  eventConfig: { ...prev.eventConfig, gpioPins: updated },
+                                }));
+                              }}
+                              placeholder="1~32"
+                              className="rounded-l-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-3 text-sm">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="event-trigger-type"
+                                checked={form.eventConfig.triggerType === "once"}
+                                onChange={() =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    eventConfig: { ...prev.eventConfig, triggerType: "once" },
+                                  }))
+                                }
+                              />
+                              <span>點動模式</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="event-trigger-type"
+                                checked={form.eventConfig.triggerType === "hold"}
+                                onChange={() =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    eventConfig: { ...prev.eventConfig, triggerType: "hold" },
+                                  }))
+                                }
+                              />
+                              <span>開關模式</span>
+                            </label>
+                          </div>
+
+                          {form.eventConfig.gpioPins.length > 1 && (
+                            <button
+                              type="button"
+                              className="text-xs px-2 py-1 rounded border border-destructive text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                const updated = form.eventConfig.gpioPins.filter((_, i) => i !== index);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  eventConfig: { ...prev.eventConfig, gpioPins: updated },
+                                }));
+                              }}
+                            >
+                              刪除
+                            </button>
+                          )}
                         </div>
-                        <Input
-                          value={form.eventConfig.gpioPin}
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              eventConfig: { ...prev.eventConfig, gpioPin: e.target.value },
-                            }))
-                          }
-                          placeholder="3"
-                          className="rounded-l-none"
-                        />
-                      </div>
+                      ))}
                     </div>
                   </div>
                 )}
