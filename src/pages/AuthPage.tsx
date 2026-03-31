@@ -89,6 +89,40 @@ export default function AuthPage() {
               </Button>
             </form>
 
+            {/* [變更開始] 測試帳號快速帶入區塊（僅登入模式顯示） */}
+            {!isSignUp && (
+              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground text-center">測試帳號（密碼均為 123456）</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setEmail("admin@signcms.com");
+                      setPassword("123456");
+                    }}
+                  >
+                    帶入管理者
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      setEmail("user@signcms.com");
+                      setPassword("123456");
+                    }}
+                  >
+                    帶入一般使用者
+                  </Button>
+                </div>
+              </div>
+            )}
+            {/* [變更結束] */}
+
             <p className="text-center text-sm text-muted-foreground">
               {isSignUp ? t("authHaveAccount") : t("authNoAccount")}
               <button type="button" className="text-primary hover:underline ml-1 font-medium" onClick={() => setIsSignUp(!isSignUp)}>
