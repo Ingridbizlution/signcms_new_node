@@ -1557,6 +1557,18 @@ export default function ScreensPage() {
             className="pl-9 w-56"
           />
         </div>
+        <Select value={groupFilter} onValueChange={setGroupFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder={t("allGroups")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("allGroups")}</SelectItem>
+            <SelectItem value={UNGROUPED}>{t("screensUngrouped")}</SelectItem>
+            {groups.map((g) => (
+              <SelectItem key={g} value={g}>{g}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
