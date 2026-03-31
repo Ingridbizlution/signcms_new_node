@@ -137,6 +137,32 @@ const TEMPLATES: TemplateItem[] = [
   ]},
 ];
 
+// ── Snap to grid helper ────────────────────────────────────────────
+function snapToGrid(value: number, step = 5): number {
+  return Math.round(value / step) * step;
+}
+
+// ── Collision detection helpers ─────────────────────────────────────
+function isOverlapping(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number }
+): boolean {
+  return !(
+    a.x + a.w <= b.x ||
+    a.x >= b.x + b.w ||
+    a.y + a.h <= b.y ||
+    a.y >= b.y + b.h
+  );
+}
+
+function wouldOverlapAnyZone(
+  nextZone: { x: number; y: number; w: number; h: number },
+  allZones: { id: string; x: number; y: number; w: number; h: number }[],
+  selfId: string
+): boolean {
+  return allZones.some((z) => z.id !== selfId && isOverlapping(nextZone, z));
+}
+
 // ── Carousel Preview ───────────────────────────────────────────────
 function CarouselPreview({ items, transition = "fade" }: { items: MediaItem[]; transition?: CarouselTransition }) {
   const [idx, setIdx] = useState(0);
@@ -718,6 +744,7 @@ export default function ContentStudioPage() {
   const [overlays, setOverlays] = useState<OverlayBlock[]>([]);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [selectedOverlay, setSelectedOverlay] = useState<string | null>(null);
+  const [draggingZoneId, setDraggingZoneId] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<string>("layouts");
 
   // Project state
@@ -953,6 +980,41 @@ export default function ContentStudioPage() {
     window.addEventListener("mousemove", onMove); window.addEventListener("mouseup", onUp);
   }, [overlays]);
 
+  // Zone drag logic
+  const handleZoneDragStart = useCallback((e: React.MouseEvent, zoneId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const zone = zones.find((z) => z.id === zoneId);
+    if (!zone) return;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = zone.x;
+    const origY = zone.y;
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+    setDraggingZoneId(zoneId);
+    const onMove = (ev: MouseEvent) => {
+      const dxPercent = ((ev.clientX - startX) / canvasRect.width) * 100;
+      const dyPercent = ((ev.clientY - startY) / canvasRect.height) * 100;
+      setZones((prev) => {
+        const z = prev.find((z) => z.id === zoneId);
+        if (!z) return prev;
+        const newX = snapToGrid(Math.max(0, Math.min(100 - z.w, origX + dxPercent)));
+        const newY = snapToGrid(Math.max(0, Math.min(100 - z.h, origY + dyPercent)));
+        const nextZone = { x: newX, y: newY, w: z.w, h: z.h };
+        if (wouldOverlapAnyZone(nextZone, prev, zoneId)) return prev;
+        return prev.map((zo) => zo.id === zoneId ? { ...zo, x: newX, y: newY } : zo);
+      });
+    };
+    const onUp = () => {
+      setDraggingZoneId(null);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [zones]);
+
   const activeZone = zones.find((z) => z.id === selectedZone);
   const activeOverlay = overlays.find((o) => o.id === selectedOverlay);
   return (
@@ -1066,7 +1128,7 @@ export default function ContentStudioPage() {
               const mediaItems = zone.content?.mediaItems || [];
               return (
                 <div key={zone.id}
-                  className={`absolute cursor-pointer transition-all duration-200 flex items-center justify-center overflow-hidden ${isSelected ? "ring-2 ring-primary ring-offset-1 z-10" : "hover:ring-1 hover:ring-primary/40"}`}
+                  className={`absolute cursor-pointer transition-all duration-200 flex items-center justify-center overflow-hidden group ${draggingZoneId === zone.id ? "opacity-60" : ""} ${isSelected ? "ring-2 ring-primary ring-offset-1 z-10" : "hover:ring-1 hover:ring-primary/40"}`}
                   style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.w}%`, height: `${zone.h}%`, background: bg }}
                   onClick={() => { setSelectedOverlay(null); setSelectedZone(isSelected ? null : zone.id); }}
                 >
@@ -1088,7 +1150,15 @@ export default function ContentStudioPage() {
                     </div>
                   )}
 
-                  <span className="absolute top-1.5 left-1.5 bg-foreground/80 text-background text-[10px] font-bold px-1.5 py-0.5 rounded">{zone.label}</span>
+                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+                    <div
+                      className="opacity-0 group-hover:opacity-100 transition-opacity cursor-move p-0.5 rounded bg-foreground/60 text-background hover:bg-foreground/80"
+                      onMouseDown={(e) => handleZoneDragStart(e, zone.id)}
+                    >
+                      <Move className="w-3 h-3" />
+                    </div>
+                    <span className="bg-foreground/80 text-background text-[10px] font-bold px-1.5 py-0.5 rounded">{zone.label}</span>
+                  </div>
 
                   {hasResizeHandle(zone, "right", zones) && (
                     <div className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-20 group/handle hover:bg-primary/30 transition-colors" onMouseDown={(e) => handleResizeStart(e, zone.id, "right")}>
