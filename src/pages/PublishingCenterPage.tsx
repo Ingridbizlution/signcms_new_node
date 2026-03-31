@@ -6,6 +6,7 @@ import { useUserOrgs } from "@/hooks/useUserOrgs";
 import { format } from "date-fns";
 import { mockScreens } from "@/mock/screensMockData";
 import { mockSchedules } from "@/mock/schedulesMockData";
+import { mockPublishRecords } from "@/mock/publishRecordsMockData";
 import {
   Send, CalendarClock, Monitor, CheckCircle2, Clock, Loader2,
   Play, Zap, Calendar as CalendarIcon, ListMusic, Building2,
@@ -110,7 +111,7 @@ export default function PublishingCenterPage() {
         items_count: s.items.length,
       }))
     );
-    setRecords([]);
+    setRecords([...mockPublishRecords]);
     setLoading(false);
   }, []);
 
