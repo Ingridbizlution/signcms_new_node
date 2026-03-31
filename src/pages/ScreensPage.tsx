@@ -1503,10 +1503,21 @@ export default function ScreensPage() {
           <p className="text-sm text-muted-foreground mt-1">{t("screensSubtitle")}</p>
         </div>
         {isAdmin && (
-          <Button onClick={openAdd} className="gap-2 self-start" title={t("tipAddScreen")}>
-            <Plus className="w-4 h-4" />
-            {t("screensAdd")}
-          </Button>
+          <div className="flex items-center gap-2 self-start">
+            <Button
+              variant="outline"
+              onClick={() => setNewGroupDialogOpen(true)}
+              className="gap-2"
+              title={t("tipAddScreenGroup")}
+            >
+              <FolderPlus className="w-4 h-4" />
+              {t("screensNewGroup")}
+            </Button>
+            <Button onClick={openAdd} className="gap-2" title={t("tipAddScreen")}>
+              <Plus className="w-4 h-4" />
+              {t("screensAdd")}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1535,134 +1546,122 @@ export default function ScreensPage() {
         ))}
       </div>
 
-      {/* C. Toolbar：群組 chips（左）+ 搜尋（右）*/}
-      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-        <div className="flex flex-wrap gap-2 flex-1">
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setNewGroupDialogOpen(true)}
-              className="gap-1.5 h-7 text-xs"
-              title={t("tipAddScreenGroup")}
-            >
-              <FolderPlus className="w-3 h-3" />
-              {t("screensNewGroup")}
+      {/* C. 搜尋 + 操作區塊 */}
+      <div className="flex gap-2 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={t("screensSearchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 w-56"
+          />
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
+              <SlidersHorizontal className="w-4 h-4" />
             </Button>
-          )}
-          <button
-            onClick={() => setGroupFilter(groupFilter === UNGROUPED ? "all" : UNGROUPED)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${groupFilter === UNGROUPED
-                ? "bg-muted-foreground text-background"
-                : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-          >
-            <Layers className="w-3 h-3" />
-            {t("screensUngrouped")}
-            <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === UNGROUPED ? "bg-background/20" : "bg-background"}`}>
-              {ungroupedCount}
-            </span>
-          </button>
-          {groups.map((g) => {
-            const count = screens.filter((s) => s.branch === g).length;
-            return (
-              <div key={g} className="inline-flex items-center group relative">
-                <button
-                  onClick={() => setGroupFilter(groupFilter === g ? "all" : g)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${groupFilter === g
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
-                    } ${isAdmin ? "pr-7" : ""}`}
-                >
-                  <Layers className="w-3 h-3" />
-                  {g}
-                  <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === g ? "bg-primary-foreground/20" : "bg-background"}`}>
-                    {count}
-                  </span>
-                </button>
-                {isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10">
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[140px]">
-                      <DropdownMenuItem onClick={() => openRename(g)} className="gap-2 text-xs">
-                        <Pencil className="w-3.5 h-3.5" />
-                        {t("screensRenameGroup")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeleteGroupTarget(g)} className="gap-2 text-xs text-destructive focus:text-destructive">
-                        <Trash2 className="w-3.5 h-3.5" />
-                        {t("screensDeleteGroup")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+          </PopoverTrigger>
+          <PopoverContent className="w-72" align="end">
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
+                <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
               </div>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder={t("screensSearchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 w-56"
-            />
-          </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" title={t("tipSpeedThreshold")}>
-                <SlidersHorizontal className="w-4 h-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72" align="end">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-1">網路速度閾值設定</h4>
-                  <p className="text-xs text-muted-foreground">低於閾值時螢幕列表將顯示警告</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={uploadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(v, downloadThreshold);
+                    }}
+                    className="h-8"
+                  />
                 </div>
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">上傳速率閾值 (Mbps)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={uploadThreshold}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value) || 0;
-                        saveThresholds(v, downloadThreshold);
-                      }}
-                      className="h-8"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">下載速率閾值 (Mbps)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={downloadThreshold}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value) || 0;
-                        saveThresholds(uploadThreshold, v);
-                      }}
-                      className="h-8"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
-                  <span className="w-2 h-2 rounded-full bg-success" /> 正常
-                  <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
+                <div className="space-y-1.5">
+                  <Label className="text-xs">下載速率閾值 (Mbps)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={downloadThreshold}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value) || 0;
+                      saveThresholds(uploadThreshold, v);
+                    }}
+                    className="h-8"
+                  />
                 </div>
               </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                <span className="w-2 h-2 rounded-full bg-success" /> 正常
+                <span className="w-2 h-2 rounded-full bg-destructive ml-2" /> 低於閾值
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* D. 群組 chips */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setGroupFilter(groupFilter === UNGROUPED ? "all" : UNGROUPED)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${groupFilter === UNGROUPED
+              ? "bg-muted-foreground text-background"
+              : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+        >
+          <Layers className="w-3 h-3" />
+          {t("screensUngrouped")}
+          <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === UNGROUPED ? "bg-background/20" : "bg-background"}`}>
+            {ungroupedCount}
+          </span>
+        </button>
+        {groups.map((g) => {
+          const count = screens.filter((s) => s.branch === g).length;
+          return (
+            <div key={g} className="inline-flex items-center group relative">
+              <button
+                onClick={() => setGroupFilter(groupFilter === g ? "all" : g)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${groupFilter === g
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-accent"
+                  } ${isAdmin ? "pr-7" : ""}`}
+              >
+                <Layers className="w-3 h-3" />
+                {g}
+                <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${groupFilter === g ? "bg-primary-foreground/20" : "bg-background"}`}>
+                  {count}
+                </span>
+              </button>
+              {isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-foreground/10">
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[140px]">
+                    <DropdownMenuItem onClick={() => openRename(g)} className="gap-2 text-xs">
+                      <Pencil className="w-3.5 h-3.5" />
+                      {t("screensRenameGroup")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDeleteGroupTarget(g)} className="gap-2 text-xs text-destructive focus:text-destructive">
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {t("screensDeleteGroup")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* D. 裝置 Table */}

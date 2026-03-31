@@ -3,8 +3,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserOrgs } from "@/hooks/useUserOrgs";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { mockScreens } from "@/mock/screensMockData";
+import { mockSchedules } from "@/mock/schedulesMockData";
 import {
   Send, CalendarClock, Monitor, CheckCircle2, Clock, Loader2,
   Play, Zap, Calendar as CalendarIcon, ListMusic, Building2,
@@ -89,30 +90,27 @@ export default function PublishingCenterPage() {
   const [restoring, setRestoring] = useState(false);
   const [showRestoreSuccess, setShowRestoreSuccess] = useState(false);
 
-  // Fetch data
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [schedRes, screenRes, recordRes] = await Promise.all([
-      (supabase as any).from("schedules").select("id, name, org_id, screen_id, screens:screen_id(name)").order("name"),
-      (supabase as any).from("screens").select("id, name, branch, online, org_id").order("branch, name"),
-      (supabase as any).from("publish_records").select("*").order("created_at", { ascending: false }).limit(50),
-    ]);
-
-    const { data: itemCounts } = await (supabase as any).from("schedule_items").select("schedule_id");
-    const countMap = new Map<string, number>();
-    (itemCounts || []).forEach((i: any) => {
-      countMap.set(i.schedule_id, (countMap.get(i.schedule_id) || 0) + 1);
-    });
-
-    setSchedules((schedRes.data || []).map((s: any) => ({
-      id: s.id,
-      name: s.name,
-      org_id: s.org_id || null,
-      screen_name: s.screens?.name || "-",
-      items_count: countMap.get(s.id) || 0,
-    })));
-    setScreens((screenRes.data || []).map((s: any) => ({ ...s, org_id: s.org_id || null })) as ScreenOption[]);
-    setRecords((recordRes.data || []) as PublishRecord[]);
+  // Load mock data
+  const fetchData = useCallback(() => {
+    setScreens(
+      mockScreens.map((s) => ({
+        id: s.id,
+        name: s.name,
+        branch: s.branch,
+        online: s.online,
+        org_id: s.org_id ?? null,
+      }))
+    );
+    setSchedules(
+      mockSchedules.map((s) => ({
+        id: s.id,
+        name: s.name,
+        org_id: s.org_id,
+        screen_name: s.screen_label,
+        items_count: s.items.length,
+      }))
+    );
+    setRecords([]);
     setLoading(false);
   }, []);
 
@@ -192,33 +190,27 @@ export default function PublishingCenterPage() {
       scheduledAt = dt.toISOString();
     }
 
-    const inserts = Array.from(selectedScreenIds).map((screenId) => {
+    const newRecords: PublishRecord[] = Array.from(selectedScreenIds).map((screenId) => {
       const screen = screens.find((s) => s.id === screenId);
       return {
-        schedule_id: selectedScheduleId,
-        screen_id: screenId,
+        id: `record-${Date.now()}-${screenId}`,
         schedule_name: schedule?.name || "",
         screen_name: screen?.name || "",
         status: publishMode === "now" ? "playing" : "scheduled",
         scheduled_at: scheduledAt,
-        published_by: user?.id,
+        created_at: new Date().toISOString(),
       };
     });
 
-    const { error } = await (supabase as any).from("publish_records").insert(inserts);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 2500);
-      toast.success(publishMode === "now" ? t("publishSuccessNow") : t("publishSuccessScheduled"));
-      logActivity({ action: publishMode === "now" ? "立即發佈" : "排程發佈", category: "publish", detail: `${selectedScreenIds.size} 個螢幕` });
-      setSelectedScheduleId(null);
-      setSelectedScreenIds(new Set());
-      setPublishMode("now");
-      setScheduledDate(undefined);
-      fetchData();
-    }
+    setRecords((prev) => [...newRecords, ...prev]);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 2500);
+    toast.success(publishMode === "now" ? t("publishSuccessNow") : t("publishSuccessScheduled"));
+    logActivity({ action: publishMode === "now" ? "立即發佈" : "排程發佈", category: "publish", detail: `${selectedScreenIds.size} 個螢幕` });
+    setSelectedScheduleId(null);
+    setSelectedScreenIds(new Set());
+    setPublishMode("now");
+    setScheduledDate(undefined);
     setPublishing(false);
   };
 
@@ -227,48 +219,34 @@ export default function PublishingCenterPage() {
     if (!emergencyMessage.trim()) { toast.error(t("emergencyFillMessage")); return; }
     setEmergencyPublishing(true);
 
-    const inserts = screens.map((screen) => ({
-      schedule_id: null,
-      screen_id: screen.id,
+    const newRecords: PublishRecord[] = screens.map((screen) => ({
+      id: `emergency-${Date.now()}-${screen.id}`,
       schedule_name: `🚨 ${t("emergencyTitle")}`,
       screen_name: screen.name,
       status: "emergency",
       scheduled_at: null,
-      published_by: user?.id,
+      created_at: new Date().toISOString(),
     }));
 
-    const { error } = await (supabase as any).from("publish_records").insert(inserts);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setShowEmergencySuccess(true);
-      setTimeout(() => setShowEmergencySuccess(false), 3000);
-      setEmergencyMessage("");
-      setEmergencyOpen(false);
-      setEmergencyConfirmOpen(false);
-      fetchData();
-    }
+    setRecords((prev) => [...newRecords, ...prev]);
+    setShowEmergencySuccess(true);
+    setTimeout(() => setShowEmergencySuccess(false), 3000);
+    setEmergencyMessage("");
+    setEmergencyOpen(false);
+    setEmergencyConfirmOpen(false);
     setEmergencyPublishing(false);
   };
 
   // Restore normal playback
   const handleRestoreNormal = async () => {
     setRestoring(true);
-    // Update all emergency records to "restored"
-    const { error } = await (supabase as any)
-      .from("publish_records")
-      .update({ status: "restored" })
-      .eq("status", "emergency");
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setShowRestoreSuccess(true);
-      setTimeout(() => setShowRestoreSuccess(false), 2500);
-      toast.success(t("restoreNormalSuccess"));
-      setRestoreOpen(false);
-      fetchData();
-    }
+    setRecords((prev) =>
+      prev.map((r) => (r.status === "emergency" ? { ...r, status: "restored" } : r))
+    );
+    setShowRestoreSuccess(true);
+    setTimeout(() => setShowRestoreSuccess(false), 2500);
+    toast.success(t("restoreNormalSuccess"));
+    setRestoreOpen(false);
     setRestoring(false);
   };
 
